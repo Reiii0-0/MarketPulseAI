@@ -1,0 +1,71 @@
+[project]
+name = "marketpulseai"
+version = "0.1.0"
+description = "Real-time financial intelligence platform with Kafka, dbt, XGBoost, and FastAPI."
+authors = [
+    { name = "Principal Architect", email = "architect@marketpulse.ai" }
+]
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "pydantic>=2.6,<3.0",
+    "pydantic-settings>=2.2,<3.0",
+    "fastapi>=0.111,<0.200",
+    "uvicorn[standard]>=0.29,<1.0",
+    "confluent-kafka>=2.4,<3.0",
+    "xgboost>=2.0,<2.1",
+    "scikit-learn>=1.4,<2.0",
+    "shap>=0.45,<1.0",
+    "numpy>=1.26,<2.0",
+    "pandas>=2.2,<3.0",
+    "psycopg2-binary>=2.9,<3.0",
+    "requests>=2.31,<3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0,<9.0",
+    "pytest-cov>=5.0,<6.0",
+    "pytest-mock>=3.12,<4.0",
+    "pytest-asyncio>=0.23,<1.0",
+    "httpx>=0.27,<1.0",
+    "ruff>=0.4,<1.0",
+    "mypy>=1.10,<2.0",
+    "dbt-postgres>=1.7,<1.8",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["api*", "consumer*", "producer*", "model*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "T201"]
+ignore = ["B008", "E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["producer", "consumer", "api", "model"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+disallow_untyped_defs = false
+check_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+check_untyped_defs = false
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --cov=api --cov=consumer --cov=producer --cov=model --cov-report=term-missing"
+testpaths = ["tests"]
+markers = [
+    "unit: mark a test as a unit test",
+    "integration: mark a test as an integration test",
+]
+asyncio_mode = "auto"
