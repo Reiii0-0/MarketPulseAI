@@ -1,0 +1,184 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 1,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "marketpulse_postgres_db"
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Real-time Ticker Price (5-min candles)",
+      "type": "candlestick",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT window_start AS time, open, high, low, close FROM marts.stock_features WHERE ticker = '${ticker}' AND $__timeFilter(window_start) ORDER BY 1 ASC",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "marketpulse_postgres_db"
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "title": "Sentiment Score Trend",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT window_start AS time, LAST_VALUE(avg_sentiment_score) OVER (PARTITION BY ticker ORDER BY window_start ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS value FROM marts.stock_features WHERE ticker = '${ticker}' AND $__timeFilter(window_start) ORDER BY 1 ASC",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "marketpulse_postgres_db"
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "title": "Trading Volume by Ticker",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT window_start AS time, volume AS value FROM marts.stock_features WHERE ticker = '${ticker}' AND $__timeFilter(window_start) ORDER BY 1 ASC",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "marketpulse_postgres_db"
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "title": "Prediction Accuracy (%)",
+      "type": "gauge",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "green", "value": 0.7 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT monitoring_window_start AS time, accuracy AS value FROM marts.model_monitoring WHERE ticker = '${ticker}' ORDER BY 1 DESC LIMIT 1",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "marketpulse_postgres_db"
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 14 },
+      "id": 5,
+      "title": "SHAP Factor Contribution (Top 3 Features)",
+      "type": "barchart",
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH exploded AS (\n  SELECT jsonb_array_elements(shap_factors) AS factor \n  FROM marts.predictions \n  WHERE ticker = '${ticker}' \n  ORDER BY predicted_at DESC LIMIT 50\n)\nSELECT \n  factor->>'feature' AS metric, \n  AVG((factor->>'shap_value')::float) AS value \nFROM exploded \nGROUP BY 1 \nORDER BY ABS(AVG((factor->>'shap_value')::float)) DESC \nLIMIT 5",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "marketpulse_postgres_db"
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 14 },
+      "id": 6,
+      "title": "Kafka Consumer Lag (Latest Tick vs Now)",
+      "type": "stat",
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT NOW() AS time, EXTRACT(EPOCH FROM (NOW() - MAX(event_timestamp))) AS value FROM raw.market_ticks",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "templating": {
+    "list": [
+      {
+        "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
+        "definition": "SELECT ticker FROM marts.stock_features GROUP BY 1",
+        "name": "ticker",
+        "query": "SELECT ticker FROM marts.stock_features GROUP BY 1",
+        "refresh": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "title": "MarketPulseAI Intelligence Platform",
+  "uid": "marketpulse-main",
+  "version": 4
+}

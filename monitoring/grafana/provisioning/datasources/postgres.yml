@@ -1,0 +1,21 @@
+apiVersion: 1
+
+datasources:
+  - name: MarketPulse-Postgres
+    type: postgres
+    uid: marketpulse_postgres_db
+    url: postgres:5432 # Hardcoded to service name to bypass env var interpolation issues
+    database: marketpulse
+    user: marketpulse_user
+    secureJsonData:
+      password: changeme_use_a_strong_password_here
+    jsonData:
+      sslmode: 'disable'
+      maxOpenConns: 10
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+      postgresVersion: 1500
+      timesbin: false
+      searchPath: 'marts,staging,raw,public' # Crucial for schema visibility
+    isDefault: true
+    editable: true

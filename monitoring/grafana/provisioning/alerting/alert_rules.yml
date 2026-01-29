@@ -1,0 +1,52 @@
+apiVersion: 1
+
+groups:
+  - name: MarketPulse-Alerts
+    folder: Platform-Health
+    interval: 1m
+    rules:
+      - uid: high_consumer_lag
+        title: HighConsumerLag
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: MarketPulse-Postgres
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              rawQuery: true
+              refId: A
+              sql: SELECT EXTRACT(EPOCH FROM (NOW() - MAX(event_timestamp))) AS lag FROM raw.market_ticks
+        for: 2m
+        annotations:
+          summary: "Kafka Consumer Lag is higher than 60 seconds."
+          description: "The difference between the latest event timestamp in the database and the current system time has exceeded 60 seconds."
+        labels:
+          severity: critical
+          service: consumer
+
+      - uid: low_model_accuracy
+        title: LowModelAccuracy
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: MarketPulse-Postgres
+            model:
+              intervalMs: 1000
+              maxDataPoints: 43200
+              rawQuery: true
+              refId: A
+              sql: SELECT accuracy FROM marts.model_monitoring ORDER BY monitoring_window_start DESC LIMIT 1
+        for: 5m
+        annotations:
+          summary: "Model accuracy dropped below 60%."
+          description: "The average prediction accuracy has fallen below the 60% threshold."
+        labels:
+          severity: warning
+          service: model
