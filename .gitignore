@@ -158,3 +158,4 @@ project/data/raw/*.csv
 project/model/artefacts/*.json
 project/model/artefacts/*.pkl
 !project/model/artefacts/.gitkeep
+.gemini/
