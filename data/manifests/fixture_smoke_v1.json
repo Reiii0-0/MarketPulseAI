@@ -1,0 +1,21 @@
+{
+  "dataset_id": "fixture_smoke_v1",
+  "source": "MarketPulseAI deterministic fixture generator (seed=42)",
+  "license_and_redistribution": "CC0-1.0 / repository internal synthetic fixture; safe for CI, demos, and public portfolio artifacts (explicitly marked synthetic_fixture; not real market evidence).",
+  "checksum_sha256": "8828a7756f7a69de72ac67dacc2715323088c1c3b50f1638be3ae1d6fab8e4be",
+  "file_path": "data/fixtures/smoke_1m_v1.csv",
+  "schema_type": "ohlcv_1m_bars",
+  "tickers": [
+    "AAPL",
+    "MSFT"
+  ],
+  "period_start": "2025-01-15T14:30:00+00:00",
+  "period_end": "2025-01-15T15:15:00+00:00",
+  "timezone": "UTC",
+  "availability_method": "explicit_synthetic_bar_close_plus_5s",
+  "availability_assumed": true,
+  "provenance": "synthetic_fixture",
+  "seed": 42,
+  "record_count": 89,
+  "notes": "Includes 44 AAPL bars (with deterministic gap at 15:00Z-15:01Z and flat-price tie at 14:51Z/14:56Z) and 45 MSFT bars."
+}

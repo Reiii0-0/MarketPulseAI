@@ -1,0 +1,220 @@
+{
+  "conclusion": "success",
+  "createdAt": "2026-11-16T16:20:16Z",
+  "databaseId": 43906352303,
+  "event": "pull_request",
+  "headBranch": "rc/tahap7-ci-verify",
+  "headSha": "45ff309e2bc97d2e2f9ef3c493da050ada266c9a",
+  "jobs": [
+    {
+      "completedAt": "2026-11-16T16:21:06Z",
+      "conclusion": "success",
+      "databaseId": 133436130579,
+      "name": "quality-and-tests",
+      "startedAt": "2026-11-16T16:20:19Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install uv",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up Python 3.11 and sync locked dependencies",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Lint and format check",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Typecheck",
+          "number": 6,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run unit and offline API integration tests",
+          "number": 7,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Install uv",
+          "number": 13,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 14,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 15,
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/Reiii0-0/MarketPulseAI/actions/runs/43906352303/job/133436130579"
+    },
+    {
+      "completedAt": "2026-11-16T16:30:48Z",
+      "conclusion": "success",
+      "databaseId": 133436669507,
+      "name": "compose-integration-recovery",
+      "startedAt": "2026-11-16T16:21:09Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install uv",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up Python 3.11 and smoke evaluation bundle",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run real Docker Compose end-to-end & recovery suite",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Collect logs, checksums, and evaluation reports",
+          "number": 6,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Upload Compose verification artifacts",
+          "number": 7,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Install uv",
+          "number": 13,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 14,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 15,
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/Reiii0-0/MarketPulseAI/actions/runs/43906352303/job/133436669507"
+    },
+    {
+      "completedAt": "2026-11-16T16:21:52Z",
+      "conclusion": "success",
+      "databaseId": 133436669714,
+      "name": "browser-e2e-ui",
+      "startedAt": "2026-11-16T16:21:09Z",
+      "status": "completed",
+      "steps": [
+        {
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Checkout repository",
+          "number": 2,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Install uv",
+          "number": 3,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Set up Python 3.11, Playwright, and Chromium",
+          "number": 4,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Run headless browser E2E suite",
+          "number": 5,
+          "status": "completed"
+        },
+        {
+          "conclusion": "skipped",
+          "name": "Upload UI screenshots on failure",
+          "number": 6,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Install uv",
+          "number": 11,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Post Checkout repository",
+          "number": 12,
+          "status": "completed"
+        },
+        {
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 13,
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/Reiii0-0/MarketPulseAI/actions/runs/43906352303/job/133436669714"
+    }
+  ],
+  "status": "completed",
+  "updatedAt": "2026-11-16T16:30:48Z",
+  "url": "https://github.com/Reiii0-0/MarketPulseAI/actions/runs/43906352303"
+}

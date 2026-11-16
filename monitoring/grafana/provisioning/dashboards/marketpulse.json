@@ -1,24 +1,11 @@
 {
   "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "datasource",
-          "uid": "grafana"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "type": "dashboard"
-      }
-    ]
+    "list": []
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": 1,
+  "graphTooltip": 1,
+  "id": null,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -27,158 +14,168 @@
         "type": "postgres",
         "uid": "marketpulse_postgres_db"
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "description": "Finalized immutable 1-minute UTC OHLCV bars from marts.final_bars (replay clock anchored; unaffected by wall-clock $__timeFilter).",
+      "gridPos": { "h": 9, "w": 14, "x": 0, "y": 0 },
       "id": 1,
-      "title": "Real-time Ticker Price (5-min candles)",
-      "type": "candlestick",
+      "options": {
+        "includeAllFields": false,
+        "mode": "candles+volume"
+      },
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT window_start AS time, open, high, low, close FROM marts.stock_features WHERE ticker = '${ticker}' AND $__timeFilter(window_start) ORDER BY 1 ASC",
+          "rawSql": "SELECT bar_end AS time, open::double precision AS open, high::double precision AS high, low::double precision AS low, close::double precision AS close, volume::double precision AS volume FROM marts.final_bars WHERE ticker = '${ticker}' AND ('${run_id}' = '' OR run_id = '${run_id}') ORDER BY bar_end ASC LIMIT 240",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Finalized 1m Bars (Replay / Business Clock UTC)",
+      "type": "candlestick"
     },
     {
       "datasource": {
         "type": "postgres",
         "uid": "marketpulse_postgres_db"
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-      "id": 2,
-      "title": "Sentiment Score Trend",
-      "type": "timeseries",
-      "targets": [
-        {
-          "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT window_start AS time, LAST_VALUE(avg_sentiment_score) OVER (PARTITION BY ticker ORDER BY window_start ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS value FROM marts.stock_features WHERE ticker = '${ticker}' AND $__timeFilter(window_start) ORDER BY 1 ASC",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "marketpulse_postgres_db"
-      },
-      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 8 },
-      "id": 3,
-      "title": "Trading Volume by Ticker",
-      "type": "timeseries",
-      "targets": [
-        {
-          "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
-          "editorMode": "code",
-          "format": "time_series",
-          "rawQuery": true,
-          "rawSql": "SELECT window_start AS time, volume AS value FROM marts.stock_features WHERE ticker = '${ticker}' AND $__timeFilter(window_start) ORDER BY 1 ASC",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "marketpulse_postgres_db"
-      },
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 8 },
-      "id": 4,
-      "title": "Prediction Accuracy (%)",
-      "type": "gauge",
+      "description": "Separates signaled accuracy, signal coverage (excluding NO_SIGNAL abstention), realized/pending/expired counts from marts.realized_outcomes_v.",
       "fieldConfig": {
         "defaults": {
-          "unit": "percentunit",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 0.5 },
-              { "color": "green", "value": 0.7 }
-            ]
-          }
+          "unit": "percent"
         }
       },
+      "gridPos": { "h": 9, "w": 10, "x": 14, "y": 0 },
+      "id": 2,
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT monitoring_window_start AS time, accuracy AS value FROM marts.model_monitoring WHERE ticker = '${ticker}' ORDER BY 1 DESC LIMIT 1",
+          "rawSql": "SELECT COALESCE(ROUND(AVG(CASE WHEN outcome_status = 'realized' AND signal_label IN ('UP','NOT_UP') THEN (was_correct::int * 100.0) END)::numeric, 2), 0)::double precision AS signaled_accuracy_pct, COALESCE(ROUND((COUNT(*) FILTER (WHERE signal_label IN ('UP','NOT_UP')) * 100.0 / NULLIF(COUNT(*), 0))::numeric, 2), 0)::double precision AS coverage_pct, COUNT(*) FILTER (WHERE outcome_status = 'realized') AS realized_count, COUNT(*) FILTER (WHERE outcome_status = 'pending') AS pending_count, COUNT(*) FILTER (WHERE outcome_status = 'expired') AS expired_count FROM marts.realized_outcomes_v WHERE ('${ticker}' = '' OR ticker = '${ticker}') AND ('${run_id}' = '' OR run_id = '${run_id}')",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Label Coverage, Signaled Accuracy & Outcome Counts",
+      "type": "table"
     },
     {
       "datasource": {
         "type": "postgres",
         "uid": "marketpulse_postgres_db"
       },
-      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 14 },
+      "description": "Top native attribution factors (model score space, not causal/calibrated delta) from marts.model_predictions.shap_factors.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "id": 3,
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH recent AS (SELECT shap_factors FROM marts.model_predictions WHERE ticker = '${ticker}' AND ('${run_id}' = '' OR run_id = '${run_id}') ORDER BY bar_end DESC LIMIT 50), exploded AS (SELECT jsonb_array_elements(shap_factors) AS factor FROM recent) SELECT factor->>'feature' AS feature, AVG((factor->>'shap_value')::double precision) AS avg_contribution FROM exploded GROUP BY 1 ORDER BY ABS(AVG((factor->>'shap_value')::double precision)) DESC LIMIT 5",
+          "refId": "A"
+        }
+      ],
+      "title": "Native Score Top Contributing Factors (Last 50 Predictions)",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "marketpulse_postgres_db"
+      },
+      "description": "Single-worker lease status, predictions written, expired backlog, and wall-clock cycle compute duration (ms).",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "id": 4,
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT run_id, dataset_id, status, predictions_written, expired_backlog_count, COALESCE(ROUND(last_compute_duration_ms::numeric, 2), 0)::double precision AS last_compute_duration_ms, last_prepared_bar_end, last_predicted_bar_end, updated_at FROM marts.prediction_worker_state ORDER BY updated_at DESC LIMIT 20",
+          "refId": "A"
+        }
+      ],
+      "title": "Worker State, Backlog & Wall-Clock Compute Duration (ms)",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "marketpulse_postgres_db"
+      },
+      "description": "Ingestion delivery progress per Kafka topic/partition: committed offsets, processed vs quarantined count, and partition status.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
       "id": 5,
-      "title": "SHAP Factor Contribution (Top 3 Features)",
-      "type": "barchart",
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH exploded AS (\n  SELECT jsonb_array_elements(shap_factors) AS factor \n  FROM marts.predictions \n  WHERE ticker = '${ticker}' \n  ORDER BY predicted_at DESC LIMIT 50\n)\nSELECT \n  factor->>'feature' AS metric, \n  AVG((factor->>'shap_value')::float) AS value \nFROM exploded \nGROUP BY 1 \nORDER BY ABS(AVG((factor->>'shap_value')::float)) DESC \nLIMIT 5",
+          "rawSql": "SELECT rdp.run_id, ir.mode, ir.provenance, rdp.topic, rdp.kafka_partition, rdp.last_kafka_offset, rdp.processed_count, rdp.quarantined_count, rdp.status, ir.logical_as_of, rdp.updated_at FROM raw.run_delivery_progress rdp LEFT JOIN raw.ingestion_runs ir ON ir.run_id = rdp.run_id ORDER BY rdp.updated_at DESC LIMIT 30",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Kafka Partition Delivery & Replay Clock Provenance",
+      "type": "table"
     },
     {
       "datasource": {
         "type": "postgres",
         "uid": "marketpulse_postgres_db"
       },
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 14 },
+      "description": "Ingestion latency for real_live events (ingested_at - available_at) vs quarantined malformed events. Replay paused/closed never counts as live outage.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
       "id": 6,
-      "title": "Kafka Consumer Lag (Latest Tick vs Now)",
-      "type": "stat",
-      "fieldConfig": {
-        "defaults": { "unit": "s" }
-      },
       "targets": [
         {
           "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, EXTRACT(EPOCH FROM (NOW() - MAX(event_timestamp))) AS value FROM raw.market_ticks",
+          "rawSql": "SELECT (SELECT COUNT(*) FROM raw.ingestion_quarantine) AS total_quarantined, (SELECT COALESCE(MAX(EXTRACT(EPOCH FROM (ingested_at - available_at))), 0.0) FROM raw.market_bars WHERE provenance = 'real_live') AS real_live_max_ingestion_latency_s, (SELECT COALESCE(EXTRACT(EPOCH FROM (NOW() - MAX(available_at))), 0.0) FROM raw.market_bars WHERE provenance = 'real_live') AS real_live_source_freshness_s, (SELECT COALESCE(AVG(compute_duration_ms), 0.0) FROM marts.model_predictions) AS avg_prediction_compute_ms",
           "refId": "A"
         }
-      ]
+      ],
+      "title": "Latency, Quarantine & Real-Live Freshness (Isolated from Replay)",
+      "type": "table"
     }
   ],
   "refresh": "10s",
   "schemaVersion": 38,
-  "style": "dark",
+  "style": "light",
+  "tags": ["marketpulse", "ml", "observability"],
   "templating": {
     "list": [
       {
+        "current": {},
         "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
-        "definition": "SELECT ticker FROM marts.stock_features GROUP BY 1",
+        "definition": "SELECT DISTINCT ticker FROM marts.final_bars ORDER BY 1",
+        "includeAll": false,
         "name": "ticker",
-        "query": "SELECT ticker FROM marts.stock_features GROUP BY 1",
+        "query": "SELECT DISTINCT ticker FROM marts.final_bars ORDER BY 1",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": { "type": "postgres", "uid": "marketpulse_postgres_db" },
+        "definition": "SELECT run_id FROM raw.ingestion_runs ORDER BY updated_at DESC LIMIT 20",
+        "includeAll": false,
+        "name": "run_id",
+        "query": "SELECT run_id FROM raw.ingestion_runs ORDER BY updated_at DESC LIMIT 20",
         "refresh": 1,
         "type": "query"
       }
     ]
   },
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
-  "title": "MarketPulseAI Intelligence Platform",
+  "time": { "from": "now-6h", "to": "now" },
+  "timezone": "utc",
+  "title": "MarketPulseAI Intelligence & Pipeline Observability",
   "uid": "marketpulse-main",
-  "version": 4
+  "version": 2
 }

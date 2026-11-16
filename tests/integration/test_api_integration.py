@@ -26,6 +26,7 @@ def test_app(loaded_predictor, mock_db_connection):
         app_inst.state.db_manager = db_mgr_mock
         app_inst.state.predictor = loaded_predictor
         import time
+
         app_inst.state.start_time = time.time() - 3600
         yield
 
@@ -89,9 +90,7 @@ def test_predict_endpoint_response_contains_three_shap_factors(test_app, fake_ma
 @pytest.mark.integration
 def test_batch_predict_endpoint_returns_correct_count(test_app, fake_market_features):
     """T-069f: Verify /predict/batch processes multiple requests."""
-    payload = {
-        "requests": [fake_market_features] * 5
-    }
+    payload = {"requests": [fake_market_features] * 5}
     response = test_app.post("/api/v1/predict/batch", json=payload)
     assert response.status_code == 200
     assert response.json()["count"] == 5

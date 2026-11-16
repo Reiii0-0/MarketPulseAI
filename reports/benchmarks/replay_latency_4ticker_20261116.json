@@ -1,0 +1,143 @@
+{
+  "measured_at": "2026-11-16T15:21:57.679152+00:00",
+  "run_id": "latency-4ticker-217e90a5c4a5",
+  "dataset_id": "synthetic_latency_4ticker_v1",
+  "source_sha256": "8828a7756f7a69de72ac67dacc2715323088c1c3b50f1638be3ae1d6fab8e4be",
+  "provenance": "synthetic_fixture",
+  "fixture_construction": "MSFT fixture OHLCV cloned to four ticker keys; no market claim",
+  "warmup_speed_multiplier": 120,
+  "measured_speed_multiplier": 1,
+  "measured_after_logical_at": "2025-01-15T15:10:15+00:00",
+  "measured_wall_seconds": 303.928,
+  "expected_predictions": 20,
+  "observed_predictions": 20,
+  "errors": [],
+  "latency_seconds": {
+    "p50": 0.265318,
+    "p95": 0.588781,
+    "max": 0.588781
+  },
+  "definition": "DB finalization transaction timestamp to first observer read of committed prediction",
+  "limits": "Conservative polling estimate (0.2s interval), same-host clocks, warm steady-state tail; excludes historical warm-up and is not live-provider latency",
+  "samples": [
+    {
+      "ticker": "AAPL",
+      "bar_end": "2025-01-15T15:11:00+00:00",
+      "seconds": 0.212224
+    },
+    {
+      "ticker": "AAPL",
+      "bar_end": "2025-01-15T15:12:00+00:00",
+      "seconds": 0.588781
+    },
+    {
+      "ticker": "AAPL",
+      "bar_end": "2025-01-15T15:13:00+00:00",
+      "seconds": 0.280101
+    },
+    {
+      "ticker": "AAPL",
+      "bar_end": "2025-01-15T15:14:00+00:00",
+      "seconds": 0.216415
+    },
+    {
+      "ticker": "AAPL",
+      "bar_end": "2025-01-15T15:15:00+00:00",
+      "seconds": 0.265318
+    },
+    {
+      "ticker": "MSFT",
+      "bar_end": "2025-01-15T15:11:00+00:00",
+      "seconds": 0.212224
+    },
+    {
+      "ticker": "MSFT",
+      "bar_end": "2025-01-15T15:12:00+00:00",
+      "seconds": 0.588781
+    },
+    {
+      "ticker": "MSFT",
+      "bar_end": "2025-01-15T15:13:00+00:00",
+      "seconds": 0.280101
+    },
+    {
+      "ticker": "MSFT",
+      "bar_end": "2025-01-15T15:14:00+00:00",
+      "seconds": 0.216415
+    },
+    {
+      "ticker": "MSFT",
+      "bar_end": "2025-01-15T15:15:00+00:00",
+      "seconds": 0.265318
+    },
+    {
+      "ticker": "NVDA",
+      "bar_end": "2025-01-15T15:11:00+00:00",
+      "seconds": 0.212224
+    },
+    {
+      "ticker": "NVDA",
+      "bar_end": "2025-01-15T15:12:00+00:00",
+      "seconds": 0.588781
+    },
+    {
+      "ticker": "NVDA",
+      "bar_end": "2025-01-15T15:13:00+00:00",
+      "seconds": 0.280101
+    },
+    {
+      "ticker": "NVDA",
+      "bar_end": "2025-01-15T15:14:00+00:00",
+      "seconds": 0.216415
+    },
+    {
+      "ticker": "NVDA",
+      "bar_end": "2025-01-15T15:15:00+00:00",
+      "seconds": 0.265318
+    },
+    {
+      "ticker": "TSLA",
+      "bar_end": "2025-01-15T15:11:00+00:00",
+      "seconds": 0.212224
+    },
+    {
+      "ticker": "TSLA",
+      "bar_end": "2025-01-15T15:12:00+00:00",
+      "seconds": 0.588781
+    },
+    {
+      "ticker": "TSLA",
+      "bar_end": "2025-01-15T15:13:00+00:00",
+      "seconds": 0.280101
+    },
+    {
+      "ticker": "TSLA",
+      "bar_end": "2025-01-15T15:14:00+00:00",
+      "seconds": 0.216415
+    },
+    {
+      "ticker": "TSLA",
+      "bar_end": "2025-01-15T15:15:00+00:00",
+      "seconds": 0.265318
+    }
+  ],
+  "passed_15s_gate": true,
+  "hardware": {
+    "platform": "Linux-7.2.6-1-cachyos-x86_64-with-glibc2.44",
+    "machine": "x86_64",
+    "cpu_count": 16,
+    "mem_total_gib": 19.21,
+    "python_version": "3.11.16",
+    "load_average": [
+      5.3857421875,
+      8.6123046875,
+      6.06884765625
+    ]
+  },
+  "worker_image_id": "sha256:5c08e8d79aa03f18f30f6703760f7e94b66324e813256f024b43c58c7b44f2bc",
+  "probe_source_sha256": "ede2f0feadec49d52c4e56f6adf8cc0d9d93bf98259d3c11b3102d2c39ae5b8e",
+  "bundle_id": "mp_1m_5m_price_v1_fixture_smoke_v1_59d1e7a1",
+  "other_workloads": "Fresh bootstrap and offline checks overlapped part of the run; desktop and unrelated Docker services retained.",
+  "source_overlay": false,
+  "probe_delivery": "Temporary probe script only; worker and pipeline modules from the packaged image."
+}

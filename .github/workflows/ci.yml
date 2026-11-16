@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality-and-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.12.17"
+          enable-cache: true
+
+      - name: Set up Python 3.11 and sync locked dependencies
+        run: |
+          uv python install 3.11
+          uv sync --locked --extra dev
+          cp .env.example .env
+
+      - name: Lint and format check
+        run: |
+          uv run --locked ruff check .
+          uv run --locked ruff format --check .
+
+      - name: Typecheck
+        run: uv run --locked mypy .
+
+      - name: Run unit and offline API integration tests
+        run: uv run --locked pytest tests/unit/ tests/integration/ -m "not compose" -v --cov-branch --cov-fail-under=70
+
+  browser-e2e-ui:
+    runs-on: ubuntu-latest
+    needs: quality-and-tests
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.12.17"
+          enable-cache: true
+
+      - name: Set up Python 3.11, Playwright, and Chromium
+        run: |
+          uv python install 3.11
+          uv sync --locked --extra dev --extra e2e
+          uv run --locked --extra dev --extra e2e playwright install --with-deps chromium
+          cp .env.example .env
+
+      - name: Run headless browser E2E suite
+        env:
+          MARKETPULSE_E2E_SCREENSHOT_DIR: ci-artifacts/e2e-screenshots
+        run: uv run --locked --extra dev --extra e2e pytest tests/e2e/ -v --no-cov
+
+      - name: Upload UI screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-failure-screenshots
+          path: ci-artifacts/e2e-screenshots
+          if-no-files-found: ignore
+
+  compose-integration-recovery:
+    runs-on: ubuntu-latest
+    needs: quality-and-tests
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.12.17"
+          enable-cache: true
+
+      - name: Set up Python 3.11 and smoke evaluation bundle
+        run: |
+          uv python install 3.11
+          uv sync --locked --extra dev --extra e2e
+          uv run --locked --extra dev --extra e2e playwright install --with-deps chromium
+          cp .env.example .env
+          docker compose config --quiet
+          docker compose -f docker-compose.yml -f deploy/docker-compose.demo-tls.yml config --quiet
+          uv run --locked python -m model.evaluate --csv data/fixtures/smoke_1m_v1.csv --manifest data/manifests/fixture_smoke_v1.json --output-dir reports/evaluation --bundle-dir model/artefacts
+
+      - name: Run real Docker Compose end-to-end & recovery suite
+        env:
+          RUN_COMPOSE_E2E: "1"
+          MARKETPULSE_E2E_SCREENSHOT_DIR: ci-artifacts/compose-screenshots
+        run: |
+          uv run --locked --extra dev --extra e2e pytest tests/integration/test_compose_e2e_recovery.py -v --no-cov
+
+      - name: Collect logs, checksums, and evaluation reports
+        if: always()
+        run: |
+          mkdir -p ci-artifacts/logs ci-artifacts/reports
+          cp -r reports/evaluation reports/benchmarks reports/verification ci-artifacts/reports/ || true
+          find -L model/artefacts reports/evaluation -type f -exec sha256sum {} + > ci-artifacts/checksums.sha256 || true
+
+      - name: Upload Compose verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-e2e-artifacts
+          path: ci-artifacts
+          if-no-files-found: ignore

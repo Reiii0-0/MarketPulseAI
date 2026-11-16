@@ -1,9 +1,14 @@
 FROM python:3.11-slim
 
+COPY --from=ghcr.io/astral-sh/uv:0.12.17 /uv /uvx /bin/
+
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
 
@@ -18,19 +23,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create non-root user
 RUN useradd -m marketpulse
 
-# 1. Copy only dependency specification
-COPY pyproject.toml .
+# 1. Copy dependency specification and lockfile
+COPY pyproject.toml uv.lock ./
 
-# 2. Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
+# 2. Install locked Python dependencies
+RUN uv sync --locked --no-dev --no-install-project
 
 # 3. Copy source code
-COPY consumer/ ./consumer/
-COPY producer/schema_validator.py ./producer/schema_validator.py
+COPY --chown=marketpulse:marketpulse consumer/ ./consumer/
+COPY --chown=marketpulse:marketpulse producer/schema_validator.py ./producer/schema_validator.py
 
 # Set ownership
-RUN chown -R marketpulse:marketpulse /app
+RUN chown marketpulse:marketpulse /app
 
 # Switch to non-root user
 USER marketpulse

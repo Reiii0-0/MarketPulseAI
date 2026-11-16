@@ -1,0 +1,182 @@
+{
+  "manifest_version": "1.0.0",
+  "generated_at": "2026-11-16T16:50:09.233832+00:00",
+  "project": "MarketPulseAI",
+  "project_version": "0.1.0",
+  "contract_id": "mp_1m_5m_price_v1",
+  "contract_version": "1.0.0",
+  "git_baseline_head": "2ef18bea452cde3744af01aa1a754979c67b00e2",
+  "ci_remote": {
+    "repository": "Reiii0-0/MarketPulseAI",
+    "branch": "rc/tahap7-ci-verify",
+    "pull_request_url": "https://github.com/Reiii0-0/MarketPulseAI/pull/1",
+    "run_id": 43906352303,
+    "run_url": "https://github.com/Reiii0-0/MarketPulseAI/actions/runs/43906352303",
+    "head_sha": "45ff309e2bc97d2e2f9ef3c493da050ada266c9a",
+    "conclusion": "success",
+    "jobs": {
+      "quality-and-tests": {
+        "conclusion": "success",
+        "duration_seconds": 47
+      },
+      "browser-e2e-ui": {
+        "conclusion": "success",
+        "duration_seconds": 43
+      },
+      "compose-integration-recovery": {
+        "conclusion": "success",
+        "duration_seconds": 579
+      }
+    }
+  },
+  "docker_images": {
+    "api_and_worker_release": {
+      "tag": "marketpulseai-api:local-finalization-20261116",
+      "digest": "sha256:5c08e8d79aa03f18f30f6703760f7e94b66324e813256f024b43c58c7b44f2bc"
+    },
+    "api_and_worker_rollback_target": {
+      "tag": "marketpulseai-api:before-local-finalization-20261116",
+      "digest": "sha256:1093d431396529b1be4ac2893befca4106f47fca8e37c3c0df86bce442e0745e"
+    }
+  },
+  "datasets_and_bundles": {
+    "public_smoke_fixture": {
+      "dataset_id": "fixture_smoke_v1",
+      "provenance": "synthetic_fixture",
+      "rows": 89,
+      "tickers": [
+        "AAPL",
+        "MSFT"
+      ],
+      "csv_sha256": "8828a7756f7a69de72ac67dacc2715323088c1c3b50f1638be3ae1d6fab8e4be",
+      "compose_bundle_id": "mp_1m_5m_price_v1_fixture_smoke_v1_8d766b1f",
+      "compose_runs": [
+        "replay-compose-1794841520",
+        "replay-compose-1794841520-second"
+      ]
+    },
+    "private_real_market_evaluation": {
+      "dataset_id": "kibot_ibm_20261116",
+      "provenance": "real_historical",
+      "ticker": "IBM",
+      "rows": 24531,
+      "sessions": 63,
+      "walk_forward_folds": 3,
+      "pre_holdout_samples": 17865,
+      "holdout_samples": 4468,
+      "purge_seconds": 315,
+      "validation_champion": "xgboost",
+      "holdout_brier_scores": {
+        "prior_baseline": 0.249998,
+        "xgboost": 0.250077,
+        "logistic_regression": 0.250325
+      },
+      "redistribution_status": "private_internal_only (excluded via .gitignore and .dockerignore)"
+    }
+  },
+  "measured_gates": {
+    "offline_test_suite": {
+      "passed": 138,
+      "deselected": 8,
+      "branch_coverage_pct": 82.65
+    },
+    "browser_e2e_suite": {
+      "passed": 2,
+      "browsers": [
+        "chromium",
+        "brave"
+      ]
+    },
+    "dbt_suite": {
+      "models_passed": 11,
+      "tests_passed": 116
+    },
+    "read_api_5min_benchmark": {
+      "total_requests": 3000,
+      "achieved_rps": 10.0,
+      "concurrency": 4,
+      "error_count": 0,
+      "latency_p50_ms": 5.34,
+      "latency_p95_ms": 9.22,
+      "latency_p99_ms": 10.3,
+      "scheduled_arrival_p95_ms": 9.3,
+      "budget_p95_ms": 300.0
+    },
+    "replay_1x_4ticker_latency": {
+      "predictions_observed": 20,
+      "predictions_expected": 20,
+      "latency_p50_seconds": 0.265318,
+      "latency_p95_seconds": 0.588781,
+      "budget_seconds": 15.0
+    },
+    "warm_fresh_state_bootstrap": {
+      "runtime_to_predictions_seconds": 57.763,
+      "total_with_bundle_and_dbt_seconds": 78.551,
+      "budget_seconds": 120.0
+    },
+    "cold_no_cache_download_and_build": {
+      "cold_uv_sync_no_cache_seconds": 170.376,
+      "cold_docker_build_no_cache_seconds": 785.013,
+      "cold_download_and_build_total_seconds": 955.389,
+      "post_cold_build_runtime_to_predictions_seconds": 68.772
+    },
+    "sql_feature_parity_24k_bars": {
+      "bars_evaluated": 24531,
+      "hash_mismatches": 0,
+      "postgres_execution_ms": 394.012
+    },
+    "tls_proxy_isolation": {
+      "pytest_passed": 7,
+      "certificate_verified": true
+    }
+  },
+  "portfolio_media": {
+    "demo_video": {
+      "path": "reports/portfolio/marketpulseai_demo.mp4",
+      "duration_seconds": 101.16,
+      "resolution": "1280x800",
+      "codec": "h264",
+      "sha256": "97279d6ba78c2f2fac699ac8cb05810518992cb1711658cc8eae7ae85d454fc1"
+    },
+    "screenshots": {
+      "product_overview_and_detail": {
+        "path": "reports/portfolio/01_product_overview_and_prediction_detail.png",
+        "resolution": "1440x2215",
+        "sha256": "b2c2fcc129a681b231f9662efb756e360a255d4a74003df11c5968128951ae5a"
+      },
+      "model_evidence": {
+        "path": "reports/portfolio/02_model_evidence_and_walk_forward.png",
+        "resolution": "1440x961",
+        "sha256": "967e1c554007baa2963b12cd76f5bcab2eb3b13676dc7cad1e0cd6471239a9dc"
+      },
+      "failure_recovery": {
+        "path": "reports/portfolio/03_failure_recovery_and_observability.png",
+        "resolution": "1440x960",
+        "sha256": "0dc1f24c5153679cd53cbac81288e1ca75f261a4051eb188691fb1a8c987b345"
+      }
+    }
+  },
+  "artifact_sha256": {
+    "config/forecast_contract.json": "e6536e9e0ca5d6e04d32512858f2869551f193c0b7f95fab16c8a7686147652b",
+    "uv.lock": "515715a82ecde05508033c4d43937223d87699f3b28d125a134dfbc4508e095d",
+    "data/fixtures/smoke_1m_v1.csv": "8828a7756f7a69de72ac67dacc2715323088c1c3b50f1638be3ae1d6fab8e4be",
+    "data/manifests/fixture_smoke_v1.json": "a8908c73986229c66395ef6a112f724b8441667bb57e9f5620189d377695ca26",
+    "reports/evaluation/fixture_smoke_v1_evaluation.json": "4ea4d037d1b91443a4979685595a3b9b8d2a0485b70e01c6c255884a7b8ad921",
+    "reports/benchmarks/read_api_5min_20261116.json": "d1c889cc937e01bb914f17bb20ec560bd34507b0e8ccca171c2a2f5c78f19d97",
+    "reports/benchmarks/replay_latency_4ticker_20261116.json": "1568c0eefb61a65a8e7e18af3b3b10d6e79cf04a90de72d90f86cfc9402c0075",
+    "reports/benchmarks/compose_read_profile.json": "21fdccc42cf17b849e9fac46819c1911269f6980a67b620ceefc74d4952c6178",
+    "reports/verification/repair_e2e.json": "4632927cdf0334e0285b4657cb5a49ab8d08771b397ea8c02935e0519ed86366",
+    "reports/verification/demo_fresh_state.json": "76496f791928d354cbcdc8302ee6a14adb0a43ec03dd28fe2de716d1e3f93452",
+    "reports/verification/demo_clean_export.json": "b4ef147320c192eea1dd91a8b46ba932a41e116fe669f071f9c7cac1784bf298",
+    "reports/verification/cold_build_and_download_20261116.json": "81241a2487296d498da3deaf4e7357fb57ce78fbfce5b9c0561d9f7ed1ac1e3c",
+    "reports/verification/image_rollback_20261116.json": "a77d5c5bca4cd6bc0bafcda654286f0c1ac5bc584a19eee0c05bac50ff151f38",
+    "reports/verification/tls_local_20261116.json": "331284cdbb528b363b7063f00e4c8ed6f866e8e3ac9fe1d9acd7c4f2514a1cfa",
+    "reports/verification/migration_guard_20261116.json": "1da6d58375503ea6350c0d95382b4aa69a4280aa63c6ac8074f66f889d2d3e67",
+    "reports/verification/github_ci_remote_20261116.json": "d59daceb5ec232136b68cb4f2299fb5035c4aaa97912de2de088e9e3c011c111",
+    "reports/verification/local_source_manifest.json": "390505626775de9c1d813c2993d9eb955d6903b0e6768f189fe5b82c98fadb53",
+    "reports/portfolio/01_product_overview_and_prediction_detail.png": "b2c2fcc129a681b231f9662efb756e360a255d4a74003df11c5968128951ae5a",
+    "reports/portfolio/02_model_evidence_and_walk_forward.png": "967e1c554007baa2963b12cd76f5bcab2eb3b13676dc7cad1e0cd6471239a9dc",
+    "reports/portfolio/03_failure_recovery_and_observability.png": "0dc1f24c5153679cd53cbac81288e1ca75f261a4051eb188691fb1a8c987b345",
+    "reports/portfolio/marketpulseai_demo.mp4": "97279d6ba78c2f2fac699ac8cb05810518992cb1711658cc8eae7ae85d454fc1"
+  }
+}

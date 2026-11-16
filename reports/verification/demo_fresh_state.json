@@ -1,0 +1,33 @@
+{
+  "measured_at": "2026-11-16T15:16:34.245498+00:00",
+  "project": "mp_fresh_20261116",
+  "run_id": "replay-fresh-export-20261116",
+  "replay_speed_multiplier": 120.0,
+  "build_requested": false,
+  "phases_seconds": {
+    "bundle_prepare": 9.589,
+    "infrastructure_ready": 7.33,
+    "topic_init": 7.333,
+    "migration": 0.265,
+    "services_start": 9.89,
+    "replay_start": 8.785,
+    "predictions_ready": 24.161,
+    "dbt_verify": 10.836
+  },
+  "runtime_to_predictions_seconds": 57.763,
+  "total_seconds": 78.551,
+  "ports": {
+    "postgres": 15600,
+    "kafka": 19200,
+    "api": 18200,
+    "grafana": 13200
+  },
+  "dashboard_url": "http://127.0.0.1:18200",
+  "model_bundle": "mp_1m_5m_price_v1_fixture_smoke_v1_81b63f5e",
+  "images": "[{\"ID\":\"sha256:28ebe2a02c292fd09193cfad12245287c53bd0f364f9a27141bd30b05691d361\",\"ContainerName\":\"mp_fresh_20261116-bar-consumer-1\",\"Repository\":\"mp_finalize_20261116-bar-consumer\",\"Tag\":\"latest\",\"Platform\":\"linux/amd64\",\"Size\":3859274877,\"Created\":\"2026-11-16T16:14:29.742213751+07:00\",\"LastTagTime\":\"2026-11-16T09:14:30.882768063Z\"},{\"ID\":\"sha256:75e8677dd559cfdabd7db87f4a546ea71a1c0ce09355a0ec6384d1098cdb7a4b\",\"ContainerName\":\"mp_fresh_20261116-producer-1\",\"Repository\":\"mp_finalize_20261116-producer\",\"Tag\":\"latest\",\"Platform\":\"linux/amd64\",\"Size\":3858196492,\"Created\":\"2026-11-16T22:02:30.866002771+07:00\",\"LastTagTime\":\"2026-11-16T15:02:31.984383033Z\"},{\"ID\":\"sha256:5c08e8d79aa03f18f30f6703760f7e94b66324e813256f024b43c58c7b44f2bc\",\"ContainerName\":\"mp_fresh_20261116-api-1\",\"Repository\":\"marketpulseai-api\",\"Tag\":\"local-finalization-20261116\",\"Platform\":\"linux/amd64\",\"Size\":4261721382,\"Created\":\"2026-11-16T22:03:33.606145167+07:00\",\"LastTagTime\":\"2026-11-16T15:03:34.46598043Z\"},{\"ID\":\"sha256:f9811e4e687ffecf1a43adb9b64096c50bc0d7a782f8608530f478b6542de7d5\",\"ContainerName\":\"mp_fresh_20261116-grafana-1\",\"Repository\":\"grafana/grafana\",\"Tag\":\"10.4.0\",\"Platform\":\"linux/amd64\",\"Size\":574467336,\"Created\":\"2024-03-05T23:03:13.521287602Z\",\"LastTagTime\":\"2026-11-12T21:11:24.427120301Z\"},{\"ID\":\"sha256:41c20d65b0a2180b9deca056d47540771752e69fe9225d5748dd65a25a9675d7\",\"ContainerName\":\"mp_fresh_20261116-init-kafka-1\",\"Repository\":\"apache/kafka\",\"Tag\":\"3.7.0\",\"Platform\":\"linux/amd64\",\"Size\":613209237,\"Created\":\"2024-02-09T14:50:00.364476489Z\",\"LastTagTime\":\"2026-11-12T21:10:21.671203824Z\"},{\"ID\":\"sha256:5c08e8d79aa03f18f30f6703760f7e94b66324e813256f024b43c58c7b44f2bc\",\"ContainerName\":\"mp_fresh_20261116-prediction-worker-1\",\"Repository\":\"marketpulseai-api\",\"Tag\":\"local-finalization-20261116\",\"Platform\":\"linux/amd64\",\"Size\":4261721382,\"Created\":\"2026-11-16T22:03:33.606145167+07:00\",\"LastTagTime\":\"2026-11-16T15:03:34.46598043Z\"},{\"ID\":\"sha256:eab009ce9447a891d9482702d370bbf132c18563bb87cfdcc2b815c6d3b0372f\",\"ContainerName\":\"mp_fresh_20261116-postgres-1\",\"Repository\":\"postgres\",\"Tag\":\"15-alpine\",\"Platform\":\"linux/amd64\",\"Size\":416404114,\"Created\":\"2026-11-05T19:10:13.779407342Z\",\"LastTagTime\":\"2026-11-12T21:11:05.3447897Z\"},{\"ID\":\"sha256:bce421af91831eac2fac109682734b33f059253ca7ab48f894046619b5d4ea29\",\"ContainerName\":\"mp_fresh_20261116-dbt-runner-1\",\"Repository\":\"mp_finalize_20261116-dbt-runner\",\"Tag\":\"latest\",\"Platform\":\"linux/amd64\",\"Size\":874043414,\"Created\":\"2026-11-16T22:01:44.436115388+07:00\",\"LastTagTime\":\"2026-11-16T15:01:45.595905271Z\"},{\"ID\":\"sha256:41c20d65b0a2180b9deca056d47540771752e69fe9225d5748dd65a25a9675d7\",\"ContainerName\":\"mp_fresh_20261116-kafka-1\",\"Repository\":\"apache/kafka\",\"Tag\":\"3.7.0\",\"Platform\":\"linux/amd64\",\"Size\":613209237,\"Created\":\"2024-02-09T14:50:00.364476489Z\",\"LastTagTime\":\"2026-11-12T21:10:21.671203824Z\"}]",
+  "verification_scope": "Fresh source export without .git/.env/.venv/model bundle or prior DB volumes. Uses cached images and uv dependency download cache; image-only Compose override selects prebuilt images. No provider keys.",
+  "api_worker_images": {
+    "api": "sha256:5c08e8d79aa03f18f30f6703760f7e94b66324e813256f024b43c58c7b44f2bc",
+    "prediction-worker": "sha256:5c08e8d79aa03f18f30f6703760f7e94b66324e813256f024b43c58c7b44f2bc"
+  }
+}

@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pytest
+
+os.environ.setdefault("POSTGRES_DB", "marketpulse")
+os.environ.setdefault("POSTGRES_USER", "marketpulse_user")
+os.environ.setdefault("POSTGRES_PASSWORD", "test_password")
 
 
 @pytest.fixture
@@ -18,6 +24,7 @@ def fake_market_tick():
         "replay_sequence": 100042,
     }
 
+
 @pytest.fixture
 def fake_sentiment_event():
     """Valid sentiment event data matching SCHEMA.md §2.2."""
@@ -31,6 +38,7 @@ def fake_sentiment_event():
         "confidence": 0.9234,
         "replay_sequence": 5001,
     }
+
 
 @pytest.fixture
 def fake_market_features():
@@ -55,18 +63,32 @@ def fake_market_features():
         "sentiment_polarity_shift": 0.0812,
     }
 
+
 @pytest.fixture
 def mock_xgb_model(mocker):
     """Mock XGBoost classifier for inference tests."""
     model = mocker.MagicMock()
     model.predict_proba.return_value = np.array([[0.2766, 0.7234]])
+    model.get_booster.return_value.predict.return_value = np.array([0.7234])
     model.feature_names_in_ = [
-        "open", "high", "low", "close", "volume",
-        "sma_20", "ema_12", "ema_26", "rsi_14",
-        "macd_line", "macd_signal", "macd_histogram",
-        "avg_sentiment_score", "sentiment_event_count", "sentiment_polarity_shift",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "sma_20",
+        "ema_12",
+        "ema_26",
+        "rsi_14",
+        "macd_line",
+        "macd_signal",
+        "macd_histogram",
+        "avg_sentiment_score",
+        "sentiment_event_count",
+        "sentiment_polarity_shift",
     ]
     return model
+
 
 @pytest.fixture
 def mock_kafka_producer(mocker):
@@ -74,11 +96,13 @@ def mock_kafka_producer(mocker):
     producer = mocker.MagicMock()
     return producer
 
+
 @pytest.fixture
 def mock_db_connection(mocker):
     """Mock psycopg2 connection for testing database operations."""
     conn = mocker.MagicMock()
     return conn
+
 
 @pytest.fixture
 def mock_shap_explainer(mocker):
@@ -87,7 +111,7 @@ def mock_shap_explainer(mocker):
     # Create specific SHAP values array for factors
     vals = np.zeros(15)
     vals[0] = 0.5  # open
-    vals[1] = -0.8 # high
+    vals[1] = -0.8  # high
     vals[2] = 0.2  # low
 
     mock_shap_values = mocker.MagicMock()
@@ -95,9 +119,11 @@ def mock_shap_explainer(mocker):
     explainer.return_value = mock_shap_values
     return explainer
 
+
 @pytest.fixture
 def loaded_predictor(mock_xgb_model, mock_shap_explainer, mocker):
     from model.predictor import Predictor
+
     scaler = mocker.MagicMock()
     scaler.transform.side_effect = lambda x: x.values
 
@@ -106,16 +132,24 @@ def loaded_predictor(mock_xgb_model, mock_shap_explainer, mocker):
         "training_date": "2024-01-10T00:00:00Z",
         "accuracy": 0.78,
         "feature_names": [
-            "open", "high", "low", "close", "volume",
-            "sma_20", "ema_12", "ema_26", "rsi_14",
-            "macd_line", "macd_signal", "macd_histogram",
-            "avg_sentiment_score", "sentiment_event_count", "sentiment_polarity_shift",
-        ]
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "sma_20",
+            "ema_12",
+            "ema_26",
+            "rsi_14",
+            "macd_line",
+            "macd_signal",
+            "macd_histogram",
+            "avg_sentiment_score",
+            "sentiment_event_count",
+            "sentiment_polarity_shift",
+        ],
     }
 
     return Predictor(
-        model=mock_xgb_model,
-        scaler=scaler,
-        metadata=metadata,
-        explainer=mock_shap_explainer
+        model=mock_xgb_model, scaler=scaler, metadata=metadata, explainer=mock_shap_explainer
     )

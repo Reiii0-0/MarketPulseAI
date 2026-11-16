@@ -1,0 +1,31 @@
+{
+	auto_https disable_redirects
+	admin off
+}
+
+{$DEMO_DOMAIN:localhost} {
+	encode gzip zstd
+
+	@blocked {
+		not method GET HEAD OPTIONS
+	}
+	handle @blocked {
+		respond 403 {
+			close
+		}
+	}
+
+	@public_routes {
+		path / /dashboard /static/* /health /health/ready /api/v1/health /api/v1/health/ready /api/v1/runs* /api/v1/bars* /api/v1/predictions* /api/v1/outcomes* /api/v1/evidence* /api/v1/tickers* /api/v1/model/info*
+	}
+
+	handle @public_routes {
+		reverse_proxy api:8000 {
+			header_up X-Forwarded-Proto {scheme}
+		}
+	}
+
+	handle {
+		respond "Not found" 404
+	}
+}

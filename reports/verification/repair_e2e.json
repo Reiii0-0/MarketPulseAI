@@ -1,0 +1,28 @@
+{
+  "project": "mp_e2e_1794841520",
+  "source_overlay": false,
+  "source_rows": 89,
+  "runs": [
+    "replay-compose-1794841520",
+    "replay-compose-1794841520-second"
+  ],
+  "final_bars_per_run": 89,
+  "snapshots_total": 178,
+  "predictions_per_run": 10,
+  "pending_after_completion": 0,
+  "verified": [
+    "duplicate",
+    "quarantine_redaction",
+    "sql_python_feature_parity",
+    "worker_restart",
+    "second_replay",
+    "commit_gap_crash",
+    "db_outage_resume",
+    "db_training_entrypoint",
+    "migration_with_existing_rows",
+    "dbt",
+    "grafana",
+    "browser"
+  ],
+  "benchmark": "reports/benchmarks/compose_read_profile.json"
+}

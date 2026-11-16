@@ -1,0 +1,116 @@
+{
+  "description": "Deterministic time-contract fixtures covering all mandatory Tahap 1 scenarios.",
+  "scenarios": {
+    "anchor_10_01_to_10_06": {
+      "event_at": "2025-01-15T15:00:25Z",
+      "expected_bar_start": "2025-01-15T15:00:00+00:00",
+      "expected_bar_end": "2025-01-15T15:01:00+00:00",
+      "expected_decision_at": "2025-01-15T15:01:15+00:00",
+      "expected_target_at": "2025-01-15T15:06:00+00:00"
+    },
+    "duplicate_and_out_of_order": {
+      "dataset_id": "fixture_unit_v1",
+      "events": [
+        {
+          "source_event_id": "evt-3",
+          "ticker": "AAPL",
+          "event_at": "2025-01-15T15:00:45Z",
+          "available_at": "2025-01-15T15:00:46Z",
+          "price": 191.5,
+          "volume": 300
+        },
+        {
+          "source_event_id": "evt-1",
+          "ticker": "AAPL",
+          "event_at": "2025-01-15T15:00:10Z",
+          "available_at": "2025-01-15T15:00:12Z",
+          "price": 190.0,
+          "volume": 100
+        },
+        {
+          "source_event_id": "evt-2",
+          "ticker": "AAPL",
+          "event_at": "2025-01-15T15:00:30Z",
+          "available_at": "2025-01-15T15:00:31Z",
+          "price": 192.0,
+          "volume": 200
+        },
+        {
+          "source_event_id": "evt-2",
+          "ticker": "AAPL",
+          "event_at": "2025-01-15T15:00:30Z",
+          "available_at": "2025-01-15T15:05:00Z",
+          "price": 192.0,
+          "volume": 200
+        }
+      ],
+      "expected_bar": {
+        "bar_end": "2025-01-15T15:01:00+00:00",
+        "open": 190.0,
+        "high": 192.0,
+        "low": 190.0,
+        "close": 191.5,
+        "volume": 600,
+        "event_count": 3,
+        "duplicate_event_count": 1
+      }
+    },
+    "late_event": {
+      "dataset_id": "fixture_unit_v1",
+      "events": [
+        {
+          "source_event_id": "evt-ontime",
+          "ticker": "AAPL",
+          "event_at": "2025-01-15T15:00:50Z",
+          "available_at": "2025-01-15T15:01:10Z",
+          "price": 190.0,
+          "volume": 500
+        },
+        {
+          "source_event_id": "evt-late",
+          "ticker": "AAPL",
+          "event_at": "2025-01-15T15:00:55Z",
+          "available_at": "2025-01-15T15:01:20Z",
+          "price": 199.0,
+          "volume": 900
+        }
+      ],
+      "expected_bar": {
+        "close": 190.0,
+        "volume": 500,
+        "late_event_count": 1
+      },
+      "expected_quarantine_reasons": ["late_after_grace"]
+    },
+    "gap_no_substitution": {
+      "anchor_bar_end": "2025-01-15T15:01:00Z",
+      "anchor_close": 100.0,
+      "present_bars": {
+        "2025-01-15T15:01:00Z": 100.0,
+        "2025-01-15T15:07:00Z": 105.0
+      },
+      "expected_status": "unavailable",
+      "expected_reason": "missing_target_bar"
+    },
+    "flat_price_tie_policy": {
+      "anchor_bar_end": "2025-01-15T15:01:00Z",
+      "present_bars": {
+        "2025-01-15T15:01:00Z": 150.0,
+        "2025-01-15T15:06:00Z": 150.0
+      },
+      "expected_status": "realized",
+      "expected_direction": "NOT_UP",
+      "expected_return_5m": 0.0
+    },
+    "session_close_boundary": {
+      "anchor_bar_end": "2025-01-15T20:58:00Z",
+      "note": "Jan 15 is EST (UTC-5): US close 16:00 EST = 21:00 UTC. Target 21:03 UTC is after close.",
+      "present_bars": {
+        "2025-01-15T20:58:00Z": 200.0,
+        "2025-01-15T21:03:00Z": 201.0
+      },
+      "expected_status": "unavailable",
+      "expected_reason": "session_end"
+    }
+  }
+}

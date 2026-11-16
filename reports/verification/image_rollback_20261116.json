@@ -1,0 +1,28 @@
+{
+  "images": {
+    "marketpulseai-api:local-finalization-20261116": "sha256:5c08e8d79aa03f18f30f6703760f7e94b66324e813256f024b43c58c7b44f2bc",
+    "marketpulseai-api:before-local-finalization-20261116": "sha256:1093d431396529b1be4ac2893befca4106f47fca8e37c3c0df86bce442e0745e"
+  },
+  "counts_before": "358|358|60",
+  "switches": [
+    {
+      "image_tag": "marketpulseai-api:before-local-finalization-20261116",
+      "api_image_id": "sha256:1093d431396529b1be4ac2893befca4106f47fca8e37c3c0df86bce442e0745e",
+      "worker_image_id": "sha256:1093d431396529b1be4ac2893befca4106f47fca8e37c3c0df86bce442e0745e",
+      "ready": true,
+      "counts_unchanged": "358|358|60",
+      "predictions_read": 10
+    },
+    {
+      "image_tag": "marketpulseai-api:local-finalization-20261116",
+      "api_image_id": "sha256:5c08e8d79aa03f18f30f6703760f7e94b66324e813256f024b43c58c7b44f2bc",
+      "worker_image_id": "sha256:5c08e8d79aa03f18f30f6703760f7e94b66324e813256f024b43c58c7b44f2bc",
+      "ready": true,
+      "counts_unchanged": "358|358|60",
+      "predictions_read": 10
+    }
+  ],
+  "source_overlay": false,
+  "model_artifacts_retained": true,
+  "scope": "local image rollback and restore on same populated DB; no volume reset"
+}

@@ -19,11 +19,13 @@ def mock_config():
     config.postgres_pool_max_conn = 2
     return config
 
+
 @patch("psycopg2.pool.ThreadedConnectionPool")
 def test_db_manager_init(mock_pool, mock_config):
     """Verifies DatabaseManager initialises connection pool."""
     DatabaseManager(mock_config)
     assert mock_pool.called
+
 
 @patch("psycopg2.pool.ThreadedConnectionPool")
 def test_db_manager_get_connection(mock_pool, mock_config):
@@ -37,6 +39,7 @@ def test_db_manager_get_connection(mock_pool, mock_config):
 
     assert mock_pool.return_value.putconn.called
 
+
 @patch("psycopg2.pool.ThreadedConnectionPool")
 def test_db_manager_execute_upsert(mock_pool, mock_config):
     """Verifies execute_upsert executes and commits."""
@@ -48,3 +51,20 @@ def test_db_manager_execute_upsert(mock_pool, mock_config):
     manager.execute_upsert("INSERT ...", {"key": "val"})
     assert mock_cur.execute.called
     assert mock_conn.commit.called
+
+
+@patch("psycopg2.pool.ThreadedConnectionPool")
+def test_pool_discards_stale_socket_before_returning_connection(mock_pool, mock_config):
+    from psycopg2 import OperationalError
+
+    manager = DatabaseManager(mock_config)
+    stale, healthy = MagicMock(), MagicMock()
+    stale.cursor.return_value.__enter__.return_value.execute.side_effect = OperationalError(
+        "server restarted"
+    )
+    healthy.closed = 0
+    mock_pool.return_value.getconn.side_effect = [stale, healthy]
+    with manager.get_connection() as connection:
+        assert connection is healthy
+    mock_pool.return_value.putconn.assert_any_call(stale, close=True)
+    mock_pool.return_value.putconn.assert_any_call(healthy, close=False)

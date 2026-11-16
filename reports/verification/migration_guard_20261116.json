@@ -1,0 +1,6 @@
+{
+  "conflicting_table_rejected": true,
+  "psql_exit_code": 3,
+  "transaction_rolled_back": true,
+  "original_view_retained": true
+}

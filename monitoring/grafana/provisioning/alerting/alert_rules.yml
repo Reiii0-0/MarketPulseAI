@@ -1,52 +1,229 @@
 apiVersion: 1
 
 groups:
-  - name: MarketPulse-Alerts
+  - orgId: 1
+    name: MarketPulse-Alerts
     folder: Platform-Health
     interval: 1m
     rules:
-      - uid: high_consumer_lag
-        title: HighConsumerLag
-        condition: A
+      - uid: live_source_freshness_stale
+        title: LiveSourceFreshnessStale
+        condition: B
+        for: 3m
+        noDataState: OK
+        execErrState: Error
         data:
           - refId: A
             relativeTimeRange:
-              from: 300
+              from: 900
               to: 0
-            datasourceUid: MarketPulse-Postgres
+            datasourceUid: marketpulse_postgres_db
             model:
-              intervalMs: 1000
-              maxDataPoints: 43200
-              rawQuery: true
               refId: A
-              sql: SELECT EXTRACT(EPOCH FROM (NOW() - MAX(event_timestamp))) AS lag FROM raw.market_ticks
-        for: 2m
+              rawQuery: true
+              format: table
+              rawSql: >-
+                WITH active_live AS (
+                  SELECT MAX(available_at) AS latest_available_at
+                  FROM raw.market_bars mb
+                  JOIN raw.ingestion_runs ir ON ir.run_id = mb.run_id
+                  WHERE ir.mode = 'live'
+                    AND ir.status = 'running'
+                    AND ir.provenance = 'real_live'
+                ),
+                nyse_open AS (
+                  SELECT (
+                    EXTRACT(ISODOW FROM (NOW() AT TIME ZONE 'America/New_York')) BETWEEN 1 AND 5
+                    AND (NOW() AT TIME ZONE 'America/New_York')::time BETWEEN TIME '09:30:00' AND TIME '16:00:00'
+                  ) AS is_open
+                )
+                SELECT CASE
+                  WHEN (SELECT is_open FROM nyse_open)
+                   AND (SELECT latest_available_at FROM active_live) IS NOT NULL
+                  THEN GREATEST(0.0, EXTRACT(EPOCH FROM (NOW() - (SELECT latest_available_at FROM active_live))))
+                  ELSE 0.0
+                END AS lag_seconds
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [180]
         annotations:
-          summary: "Kafka Consumer Lag is higher than 60 seconds."
-          description: "The difference between the latest event timestamp in the database and the current system time has exceeded 60 seconds."
+          summary: "Live real-market source freshness exceeded 180s during regular NYSE hours."
+          description: "Distinct from replay clock or market close: only fires when provenance=real_live is actively running during NYSE regular session."
         labels:
           severity: critical
-          service: consumer
+          service: ingestion
 
-      - uid: low_model_accuracy
-        title: LowModelAccuracy
-        condition: A
+      - uid: worker_backlog_or_error
+        title: WorkerBacklogOrStaleLease
+        condition: B
+        for: 2m
+        noDataState: OK
+        execErrState: Error
         data:
           - refId: A
             relativeTimeRange:
-              from: 3600
+              from: 600
               to: 0
-            datasourceUid: MarketPulse-Postgres
+            datasourceUid: marketpulse_postgres_db
             model:
-              intervalMs: 1000
-              maxDataPoints: 43200
-              rawQuery: true
               refId: A
-              sql: SELECT accuracy FROM marts.model_monitoring ORDER BY monitoring_window_start DESC LIMIT 1
-        for: 5m
+              rawQuery: true
+              format: table
+              rawSql: >-
+                SELECT COALESCE(
+                  COUNT(*) FILTER (
+                    WHERE status = 'error'
+                       OR (status = 'running' AND lease_expires_at IS NOT NULL AND lease_expires_at < NOW() - INTERVAL '60 seconds')
+                  ),
+                  0
+                )::double precision AS unhealthy_workers
+                FROM marts.prediction_worker_state
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0]
         annotations:
-          summary: "Model accuracy dropped below 60%."
-          description: "The average prediction accuracy has fallen below the 60% threshold."
+          summary: "Prediction worker entered error state or holds an expired lease."
+          description: "Measured on wall clock lease expiry and worker state; paused/completed replay runs remain 0."
+        labels:
+          severity: critical
+          service: prediction-worker
+
+      - uid: ingestion_quarantine_spike
+        title: IngestionQuarantineSpike
+        condition: B
+        for: 2m
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: marketpulse_postgres_db
+            model:
+              refId: A
+              rawQuery: true
+              format: table
+              rawSql: >-
+                SELECT COALESCE(
+                  COUNT(*) FILTER (WHERE quarantined_at >= NOW() - INTERVAL '10 minutes'),
+                  0
+                )::double precision AS quarantined_recent
+                FROM raw.ingestion_quarantine
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [5]
+        annotations:
+          summary: "Recent ingestion quarantine count exceeded 5 records in 10 minutes."
+          description: "Malformed or schema-invalid payloads were routed to raw.ingestion_quarantine instead of blocking healthy commits."
+        labels:
+          severity: warning
+          service: consumer
+
+      - uid: worker_compute_latency_high
+        title: WorkerComputeLatencyHigh
+        condition: B
+        for: 3m
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: marketpulse_postgres_db
+            model:
+              refId: A
+              rawQuery: true
+              format: table
+              rawSql: >-
+                SELECT COALESCE(MAX(last_compute_duration_ms), 0.0)::double precision AS max_compute_ms
+                FROM marts.prediction_worker_state
+                WHERE updated_at >= NOW() - INTERVAL '10 minutes'
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [5000]
+        annotations:
+          summary: "Worker wall-clock prediction cycle exceeded 5000ms."
+          description: "Tracks wall-clock execution duration separately from replay event time."
+        labels:
+          severity: warning
+          service: prediction-worker
+
+      - uid: low_signaled_accuracy_real_live
+        title: LowSignaledAccuracyRealLive
+        condition: B
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            datasourceUid: marketpulse_postgres_db
+            model:
+              refId: A
+              rawQuery: true
+              format: table
+              rawSql: >-
+                WITH recent_live AS (
+                  SELECT was_correct
+                  FROM marts.realized_outcomes_v
+                  WHERE outcome_status = 'realized'
+                    AND timeliness_status = 'timely'
+                    AND signal_label IN ('UP', 'NOT_UP')
+                    AND run_mode <> 'replay_holdout_demo'
+                  ORDER BY target_at DESC
+                  LIMIT 100
+                )
+                SELECT CASE
+                  WHEN COUNT(*) >= 20
+                  THEN ((1.0 - AVG(was_correct::int)) * 100.0)
+                  ELSE 0.0
+                END AS error_rate_pct
+                FROM recent_live
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [45]
+        annotations:
+          summary: "Realized signaled error rate exceeded 45% over recent timely live forecasts."
+          description: "Requires N>=20 timely realized non-smoke signals; prevents false alerts during low coverage or NO_SIGNAL abstention."
         labels:
           severity: warning
           service: model

@@ -1,0 +1,62 @@
+{
+  "contract_id": "mp_1m_5m_price_v1",
+  "version": "1.0.0",
+  "description": "Canonical 1-minute bar to +5-minute UP/NOT_UP forecast contract (price-only baseline).",
+  "tickers": ["AAPL", "MSFT", "NVDA", "TSLA"],
+  "timezone": "UTC",
+  "bar_interval_seconds": 60,
+  "horizon_seconds": 300,
+  "horizon_bars": 5,
+  "grace_seconds": 15,
+  "warmup_bars": 20,
+  "session_rules": {
+    "market": "US_EQUITIES_REGULAR",
+    "exchange_timezone": "America/New_York",
+    "open_local": "09:30:00",
+    "close_local": "16:00:00",
+    "trading_days": ["MON", "TUE", "WED", "THU", "FRI"],
+    "exclude_extended_hours": true
+  },
+  "target_policy": {
+    "name": "forward_5m_close_return_binary",
+    "formula": "(close_target / close_anchor) - 1.0",
+    "up_condition": "return_5m > 0.0",
+    "not_up_condition": "return_5m <= 0.0",
+    "flat_price_label": "NOT_UP",
+    "allow_target_substitution": false,
+    "missing_target_status": "unavailable",
+    "missing_target_reason": "missing_target_bar",
+    "session_boundary_reason": "session_end",
+    "dataset_boundary_reason": "dataset_end"
+  },
+  "availability_policy": {
+    "record_separate_timestamps": ["event_at", "available_at", "ingested_at"],
+    "historical_assumed_bar_lag_seconds": 5,
+    "late_event_action": "exclude_from_final_bar_and_quarantine"
+  },
+  "feature_policy": {
+    "mode": "price_only",
+    "features": [
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume",
+      "return_1m",
+      "return_5m_past",
+      "return_15m_past",
+      "sma_5",
+      "sma_20",
+      "sma_spread_5_20",
+      "volatility_20",
+      "volume_ratio_20",
+      "bar_range_pct"
+    ],
+    "sentiment_policy": {
+      "included_in_primary_model": false,
+      "require_availability_timestamp": true,
+      "require_known_provenance": true,
+      "distinguish_unavailable_from_neutral": true
+    }
+  }
+}

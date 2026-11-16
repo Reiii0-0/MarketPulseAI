@@ -39,6 +39,13 @@ $KAFKA_BIN --create --if-not-exists \
   --partitions 3 \
   --replication-factor 1
 
+# Create raw.market.bars
+$KAFKA_BIN --create --if-not-exists \
+  --bootstrap-server $BOOTSTRAP_SERVER \
+  --topic raw.market.bars \
+  --partitions 3 \
+  --replication-factor 1
+
 echo "✅ Topics created successfully:"
 $KAFKA_BIN --bootstrap-server $BOOTSTRAP_SERVER --list
 

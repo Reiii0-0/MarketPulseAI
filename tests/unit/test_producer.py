@@ -65,6 +65,7 @@ def test_producer_reads_csv_rows_in_timestamp_order(tmp_path, mock_kafka_produce
 
     # Extract timestamps from JSON values
     import json
+
     timestamps = [pd.to_datetime(json.loads(c.kwargs["value"])["event_timestamp"]) for c in calls]
     assert timestamps == sorted(timestamps)
     assert timestamps[0].hour == 9
@@ -79,7 +80,12 @@ def test_producer_validates_each_row_before_publishing(tmp_path, mock_kafka_prod
     # Invalid ticker (lowercase)
     tick_data = pd.DataFrame(
         [
-            {"ticker": "aapl", "event_timestamp": "2024-01-15T09:00:00Z", "price": 180.0, "volume": 100}
+            {
+                "ticker": "aapl",
+                "event_timestamp": "2024-01-15T09:00:00Z",
+                "price": 180.0,
+                "volume": 100,
+            }
         ]
     )
     tick_data.to_csv(tick_file, index=False)
@@ -107,8 +113,18 @@ def test_producer_applies_speed_multiplier_to_delay(tmp_path, mock_kafka_produce
     # 10 seconds apart
     tick_data = pd.DataFrame(
         [
-            {"ticker": "AAPL", "event_timestamp": "2024-01-15T09:00:00Z", "price": 180.0, "volume": 100},
-            {"ticker": "AAPL", "event_timestamp": "2024-01-15T09:00:10Z", "price": 181.0, "volume": 100},
+            {
+                "ticker": "AAPL",
+                "event_timestamp": "2024-01-15T09:00:00Z",
+                "price": 180.0,
+                "volume": 100,
+            },
+            {
+                "ticker": "AAPL",
+                "event_timestamp": "2024-01-15T09:00:10Z",
+                "price": 181.0,
+                "volume": 100,
+            },
         ]
     )
     tick_data.to_csv(tick_file, index=False)
@@ -136,8 +152,18 @@ def test_producer_assigns_monotonically_increasing_replay_sequence(tmp_path, moc
     tick_file = tmp_path / "ticks.csv"
     tick_data = pd.DataFrame(
         [
-            {"ticker": "AAPL", "event_timestamp": "2024-01-15T09:00:00Z", "price": 180.0, "volume": 100},
-            {"ticker": "MSFT", "event_timestamp": "2024-01-15T09:01:00Z", "price": 400.0, "volume": 50},
+            {
+                "ticker": "AAPL",
+                "event_timestamp": "2024-01-15T09:00:00Z",
+                "price": 180.0,
+                "volume": 100,
+            },
+            {
+                "ticker": "MSFT",
+                "event_timestamp": "2024-01-15T09:01:00Z",
+                "price": 400.0,
+                "volume": 50,
+            },
         ]
     )
     tick_data.to_csv(tick_file, index=False)
@@ -154,6 +180,7 @@ def test_producer_assigns_monotonically_increasing_replay_sequence(tmp_path, moc
 
     calls = mock_kafka_producer.produce.call_args_list
     import json
+
     seq1 = json.loads(calls[0].kwargs["value"])["replay_sequence"]
     seq2 = json.loads(calls[1].kwargs["value"])["replay_sequence"]
     assert seq2 == seq1 + 1
@@ -164,7 +191,14 @@ def test_producer_flushes_after_batch(tmp_path, mock_kafka_producer):
     """T-015e: Verify flush is called."""
     tick_file = tmp_path / "ticks.csv"
     tick_data = pd.DataFrame(
-        [{"ticker": "AAPL", "event_timestamp": "2024-01-15T09:00:00Z", "price": 180.0, "volume": 100}]
+        [
+            {
+                "ticker": "AAPL",
+                "event_timestamp": "2024-01-15T09:00:00Z",
+                "price": 180.0,
+                "volume": 100,
+            }
+        ]
     )
     tick_data.to_csv(tick_file, index=False)
 

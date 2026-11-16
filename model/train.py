@@ -1,23 +1,18 @@
 from __future__ import annotations
 
-import json
+import argparse
 import logging
-import pickle
-from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
-import xgboost as xgb
-from sklearn.metrics import (
-    accuracy_score,
-    brier_score_loss,
-    f1_score,
-    precision_score,
-    recall_score,
-)
-from sklearn.preprocessing import StandardScaler
 
 from consumer.db import DatabaseConfig, DatabaseManager
+from pipeline.contract import ForecastContract, load_forecast_contract
+from pipeline.features import (
+    TRAINING_SNAPSHOT_JOIN_SQL,
+    validate_contract_compatibility,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -28,113 +23,109 @@ logger = logging.getLogger(__name__)
 
 
 class ModelTrainer:
-    """Trains the XGBoost classification model for price direction prediction."""
+    """Trains XGBoost directional classifier strictly from canonical feature snapshots and bar targets."""
 
-    FEATURES = [
-        "open", "high", "low", "close", "volume",
-        "sma_20", "ema_12", "ema_26", "rsi_14",
-        "macd_line", "macd_signal", "macd_histogram",
-        "avg_sentiment_score", "sentiment_event_count", "sentiment_polarity_shift",
-    ]
+    FEATURES = list(load_forecast_contract().feature_policy.features)
     TARGET = "target_direction"
+    HYPERPARAMETERS: dict[str, int | float] = {
+        "n_estimators": 1000,
+        "max_depth": 6,
+        "learning_rate": 0.01,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "random_state": 42,
+        "early_stopping_rounds": 50,
+    }
 
-    def __init__(self, db_manager: DatabaseManager) -> None:
+    def __init__(
+        self,
+        db_manager: DatabaseManager,
+        contract: ForecastContract | None = None,
+    ) -> None:
         self.db = db_manager
+        self.contract = contract or load_forecast_contract()
+        self.features = list(self.contract.feature_policy.features)
         self.artefact_dir = Path("model/artefacts")
         self.artefact_dir.mkdir(parents=True, exist_ok=True)
 
-    def load_data(self) -> pd.DataFrame:
-        """Load features from marts.stock_features."""
-        query = "SELECT * FROM marts.stock_features ORDER BY window_start ASC"
+    def load_data(self, *, run_id: str) -> pd.DataFrame:
+        """Load matured, warmed-up snapshots joined with realized +5m bar targets."""
+        validate_contract_compatibility(self.contract, feature_names=self.features)
         with self.db.get_connection() as conn:
-            df = pd.read_sql(query, conn)
+            df = pd.read_sql(
+                TRAINING_SNAPSHOT_JOIN_SQL,
+                conn,
+                params=(self.contract.contract_id, self.contract.version, run_id),
+            )
 
-        # Drop rows where target is NULL (the latest windows)
-        df = df.dropna(subset=[self.TARGET])
+        if df.empty:
+            return df
 
-        # Fill optional indicators with 0 or forward fill
-        df[self.FEATURES] = df[self.FEATURES].fillna(0)
+        if "contract_id" in df.columns:
+            unique_contracts = set(df["contract_id"].dropna().astype(str))
+            for cid in unique_contracts:
+                validate_contract_compatibility(self.contract, contract_id=cid)
 
+        if "warmup_complete" in df.columns:
+            df = df[df["warmup_complete"].astype(bool)]
+
+        # Drop rows without realized target or missing canonical features (never fabricate zeros for warm-up)
+        df = df.dropna(subset=[self.TARGET, *self.features])
         return df
 
-    def train(self) -> None:
-        """Execute the full training pipeline."""
-        df = self.load_data()
+    def train_and_evaluate(
+        self,
+        *,
+        run_id: str,
+        report_dir: str | Path = "reports/evaluation",
+    ) -> dict[str, Any]:
+        """Run purged walk-forward evaluation, select champion, publish atomic bundle, and save reports."""
+        from model.evaluate import (
+            publish_model_bundle,
+            run_walk_forward_evaluation,
+            write_evaluation_report,
+        )
+
+        with self.db.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT dataset_id, provenance FROM raw.ingestion_runs WHERE run_id = %s",
+                    (run_id,),
+                )
+                run = cur.fetchone()
+        if run is None:
+            raise ValueError("Training run does not exist")
+        dataset_id, dataset_provenance = run
+        df = self.load_data(run_id=run_id)
         if df.empty:
-            logger.error("No training data found in marts.stock_features.")
-            return
+            raise ValueError(
+                "No canonical snapshots with realized targets available for evaluation."
+            )
 
-        logger.info("Loaded %d rows for training.", len(df))
-
-        # 1. Chronological Split (80/10/10)
-        df = df.sort_values("window_start")
-        n = len(df)
-        train_end = int(n * 0.8)
-        val_end = int(n * 0.9)
-
-        train_df = df.iloc[:train_end]
-        val_df = df.iloc[train_end:val_end]
-        test_df = df.iloc[val_end:]
-
-        X_train, y_train = train_df[self.FEATURES], train_df[self.TARGET]
-        X_val, y_val = val_df[self.FEATURES], val_df[self.TARGET]
-        X_test, y_test = test_df[self.FEATURES], test_df[self.TARGET]
-
-        # 2. Scaling
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_val_scaled = scaler.transform(X_val)
-        X_test_scaled = scaler.transform(X_test)
-
-        # 3. Model Fit
-        logger.info("Training XGBClassifier...")
-        model = xgb.XGBClassifier(
-            n_estimators=1000,
-            max_depth=6,
-            learning_rate=0.01,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            objective="binary:logistic",
-            random_state=42,
-            early_stopping_rounds=50,
+        report, bundle_objects = run_walk_forward_evaluation(
+            df,
+            contract=self.contract,
+            dataset_id=dataset_id,
+            dataset_provenance=dataset_provenance,
+            xgb_hyperparams=dict(self.HYPERPARAMETERS),
         )
-
-        model.fit(
-            X_train_scaled,
-            y_train,
-            eval_set=[(X_val_scaled, y_val)],
-            verbose=False,
-        )
-
-        # 4. Evaluation
-        y_pred = model.predict(X_test_scaled)
-        y_prob = model.predict_proba(X_test_scaled)[:, 1]
-
-        metrics = {
-            "accuracy": accuracy_score(y_test, y_pred),
-            "precision": precision_score(y_test, y_pred),
-            "recall": recall_score(y_test, y_pred),
-            "f1": f1_score(y_test, y_pred),
-            "brier_score": brier_score_loss(y_test, y_prob),
-            "training_date": datetime.now().isoformat(),
-            "model_version": "xgb_v1.0.0",
-            "feature_names": self.FEATURES,
-        }
-
-        logger.info("Test Metrics: %s", json.dumps(metrics, indent=2))
-
-        # 5. Save Artefacts
-        model.get_booster().save_model(str(self.artefact_dir / "xgb_model.json"))
-        with open(self.artefact_dir / "scaler.pkl", "wb") as f:
-            pickle.dump(scaler, f)
-        with open(self.artefact_dir / "metadata.json", "w") as f:
-            json.dump(metrics, f, indent=2)
-
-        logger.info("Artefacts saved to %s", self.artefact_dir)
+        write_evaluation_report(report, output_dir=report_dir)
+        publish_model_bundle(self.artefact_dir, report, bundle_objects, contract=self.contract)
+        return report
 
 
 if __name__ == "__main__":
-    db_config = DatabaseConfig()  # type: ignore
-    db_mgr = DatabaseManager(db_config)
-    trainer = ModelTrainer(db_mgr)
-    trainer.train()
+    parser = argparse.ArgumentParser(
+        description="Evaluate and publish a model from one run's immutable snapshots"
+    )
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--bundle-dir", default="model/artefacts")
+    parser.add_argument("--report-dir", default="reports/evaluation")
+    args = parser.parse_args()
+    db_mgr = DatabaseManager(DatabaseConfig())  # type: ignore[call-arg]
+    try:
+        trainer = ModelTrainer(db_mgr)
+        trainer.artefact_dir = Path(args.bundle_dir)
+        trainer.train_and_evaluate(run_id=args.run_id, report_dir=args.report_dir)
+    finally:
+        db_mgr.close()

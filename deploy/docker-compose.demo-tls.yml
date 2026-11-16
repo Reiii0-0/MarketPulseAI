@@ -1,0 +1,45 @@
+# Public read-only TLS demo overlay:
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.demo-tls.yml up -d
+# Keeps PostgreSQL, Kafka, and Grafana off public host bindings while serving
+# read-only dashboard & read API behind Caddy TLS on ports 80/443.
+
+services:
+  kafka:
+    ports: !reset []
+
+  postgres:
+    ports: !reset []
+
+  grafana:
+    ports: !reset []
+    networks:
+      - internal_net
+
+  api:
+    ports: !reset []
+    environment:
+      API_READONLY_DEMO: "true"
+      API_MAX_REQUESTS_PER_MINUTE: ${API_MAX_REQUESTS_PER_MINUTE:-60}
+      API_CORS_ORIGINS: ${API_CORS_ORIGINS:-https://localhost}
+
+  caddy-tls:
+    image: caddy:2.8-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DEMO_DOMAIN: ${DEMO_DOMAIN:-localhost}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - edge_net
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

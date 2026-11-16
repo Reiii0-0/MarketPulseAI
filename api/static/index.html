@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MarketPulseAI — 5-Minute Direction Forecast Console</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to workspace content</a>
+
+    <header class="topbar" aria-label="System Provenance and Replay Clock">
+      <div class="topbar-inner">
+        <div class="brand-block">
+          <svg
+            class="brand-mark"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <rect x="2" y="2" width="20" height="20" rx="4" stroke="currentColor" stroke-width="1.75" />
+            <polyline
+              points="5,15 9.5,11 13,13.5 19,7.5"
+              stroke="currentColor"
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <div>
+            <h1 class="brand-title">MarketPulseAI</h1>
+            <p class="brand-sub" id="contractHeaderText">Contract: mp_1m_5m_price_v1 (1m bars, +5m horizon)</p>
+          </div>
+        </div>
+
+        <dl class="provenance-bar" aria-label="Dataset Provenance and Logical Clock">
+          <div class="prov-cell">
+            <dt>Dataset Mode</dt>
+            <dd><span class="badge badge-neutral" id="datasetModeBadge">Loading…</span></dd>
+          </div>
+          <div class="prov-cell">
+            <dt>Validation Gate</dt>
+            <dd><span class="badge badge-warn" id="realMarketGateBadge">Checking…</span></dd>
+          </div>
+          <div class="prov-cell">
+            <dt>Logical Clock (UTC)</dt>
+            <dd class="mono" id="logicalClockValue">—</dd>
+          </div>
+          <div class="prov-cell">
+            <dt>Dataset End (UTC)</dt>
+            <dd class="mono" id="datasetEndValue">—</dd>
+          </div>
+          <div class="prov-cell">
+            <dt>Readiness</dt>
+            <dd><span class="badge badge-neutral" id="readinessBadge">Checking…</span></dd>
+          </div>
+        </dl>
+
+        <div class="topbar-actions">
+          <nav class="section-nav" aria-label="Page Sections">
+            <a href="#overview-panel">Overview</a>
+            <a href="#detail-panel">Prediction Detail</a>
+            <a href="#evidence-panel">Model Evidence</a>
+          </nav>
+          <div class="poll-controls">
+            <label class="toggle-label" for="pollToggle">
+              <input type="checkbox" id="pollToggle" />
+              <span>Auto-poll (10s)</span>
+            </label>
+            <button type="button" class="btn btn-secondary" id="refreshBtn">Refresh</button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="provenance-notice"
+        id="syntheticBanner"
+        role="status"
+        aria-live="polite"
+        hidden
+      >
+        <strong id="syntheticBannerTitle">Synthetic / Fixture Mode Active</strong>
+        <span id="syntheticBannerBody">
+          Metrics from fixture runs verify pipeline engineering only and must not be interpreted as real market performance.
+        </span>
+      </div>
+    </header>
+
+    <main id="main-content" class="container">
+      <div class="control-strip" role="region" aria-label="Run, Ticker, and Playback Controls">
+        <div class="control-group">
+          <label for="runSelect">Run ID</label>
+          <select id="runSelect" aria-label="Select ingestion or replay run"></select>
+        </div>
+
+        <div class="control-group">
+          <label for="tickerSelect">Ticker</label>
+          <select id="tickerSelect" aria-label="Select equity ticker"></select>
+        </div>
+
+        <div class="control-group control-playback">
+          <div class="playback-header">
+            <label for="timelineSlider">Local Playback Timeline (Read-Only Scrubbing)</label>
+            <span class="mono" id="playbackTimestampLabel">—</span>
+          </div>
+          <div class="playback-row">
+            <button type="button" class="btn btn-icon" id="stepBackBtn" aria-label="Step timeline back 1 bar">Prev</button>
+            <button type="button" class="btn btn-primary" id="playPauseBtn" aria-label="Play or pause local timeline">Play</button>
+            <button type="button" class="btn btn-icon" id="stepForwardBtn" aria-label="Step timeline forward 1 bar">Next</button>
+            <input
+              type="range"
+              id="timelineSlider"
+              min="0"
+              max="0"
+              value="0"
+              aria-label="Local historical timeline position"
+            />
+            <label class="sr-only" for="speedSelect">Playback speed</label>
+            <select id="speedSelect" aria-label="Local playback speed">
+              <option value="1200">1x</option>
+              <option value="600">2x</option>
+              <option value="250">5x</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label for="statePreviewSelect">Inspect UI State</label>
+          <select id="statePreviewSelect" aria-label="Inspect UI edge states">
+            <option value="live">Live API Data</option>
+            <option value="loading">Preview: Loading</option>
+            <option value="empty">Preview: Empty Dataset</option>
+            <option value="model_unavailable">Preview: Model Unavailable (503)</option>
+            <option value="stale">Preview: Stale / Expired Input</option>
+            <option value="error">Preview: API Failure</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="globalAlertBanner" class="alert-banner" role="alert" hidden>
+        <div class="alert-text">
+          <strong id="globalAlertTitle">System Alert</strong>
+          <p id="globalAlertMessage"></p>
+        </div>
+        <button type="button" class="btn btn-secondary" id="retryBtn">Retry Read</button>
+      </div>
+
+      <!-- SECTION 1: MARKET OVERVIEW -->
+      <section id="overview-panel" class="panel" aria-labelledby="overview-heading">
+        <div class="panel-head">
+          <div>
+            <h2 id="overview-heading">Market Overview &amp; Active Forecast</h2>
+            <p class="panel-desc" id="overviewSubtitle">
+              1-minute finalized UTC bars with immutable +5-minute forecast markers and realized outcomes.
+            </p>
+          </div>
+          <div class="status-pills">
+            <span class="badge badge-neutral" id="inputFreshnessBadge">Freshness: —</span>
+            <span class="badge badge-neutral" id="postFitBadge">Window Check: —</span>
+          </div>
+        </div>
+
+        <div class="kpi-strip" id="overviewKpis" aria-label="Forecast and Outcome Metrics">
+          <div class="metric-cell">
+            <span class="metric-label">Latest Signal (Horizon +5m)</span>
+            <span class="metric-value" id="kpiSignal">—</span>
+            <span class="metric-sub" id="kpiSignalSub">Abstain mode keeps UP / NOT_UP target intact</span>
+          </div>
+          <div class="metric-cell">
+            <span class="metric-label">Calibrated Probability P(UP)</span>
+            <span class="metric-value mono" id="kpiProbUp">—</span>
+            <span class="metric-sub mono" id="kpiProbNotUp">P(NOT_UP): —</span>
+          </div>
+          <div class="metric-cell">
+            <span class="metric-label">Coverage (Signaled / Total)</span>
+            <span class="metric-value mono" id="kpiCoverage">—</span>
+            <span class="metric-sub mono" id="kpiAbstainCount">NO_SIGNAL: —</span>
+          </div>
+          <div class="metric-cell">
+            <span class="metric-label">Timely Signaled Accuracy</span>
+            <span class="metric-value mono" id="kpiAccuracy">—</span>
+            <span class="metric-sub mono" id="kpiOutcomeBreakdown">Realized: — · Pending: — · Unavail: — · Exp: —</span>
+          </div>
+        </div>
+
+        <div id="overviewSkeleton" class="skeleton-block" hidden aria-hidden="true">
+          <div class="skeleton-line wide"></div>
+          <div class="skeleton-chart"></div>
+        </div>
+
+        <div id="overviewEmpty" class="empty-state" hidden>
+          <h3 id="overviewEmptyTitle">No Finalized Bars or Predictions Available</h3>
+          <p id="overviewEmptyBody">
+            Run replay ingestion and the single prediction worker to populate canonical 1-minute bars and +5m snapshots.
+          </p>
+        </div>
+
+        <figure id="chartFigure" class="chart-figure">
+          <div class="chart-toolbar">
+            <span class="legend-item"><span class="swatch swatch-price"></span>Close Price (1m UTC)</span>
+            <span class="legend-item"><span class="swatch swatch-up"></span>UP Prediction</span>
+            <span class="legend-item"><span class="swatch swatch-not-up"></span>NOT_UP Prediction</span>
+            <span class="legend-item"><span class="swatch swatch-abstain"></span>NO_SIGNAL Abstain</span>
+            <span class="legend-item"><span class="swatch swatch-selected"></span>Inspected Bar / Target Window</span>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              id="toggleChartTableBtn"
+              aria-expanded="false"
+              aria-controls="chartDataTableWrap"
+            >
+              Show Chart Data Table
+            </button>
+          </div>
+
+          <div class="svg-wrap">
+            <svg
+              id="priceChartSvg"
+              viewBox="0 0 920 300"
+              role="img"
+              aria-labelledby="chartTitle chartSummaryText"
+            >
+              <title id="chartTitle">1-Minute Canonical Close Price and +5m Forecast Signals</title>
+            </svg>
+          </div>
+          <figcaption id="chartSummaryText" class="chart-summary">
+            Waiting for bar series data…
+          </figcaption>
+
+          <div id="chartDataTableWrap" class="table-scroll" hidden>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Bar End (UTC)</th>
+                  <th scope="col">Open</th>
+                  <th scope="col">High</th>
+                  <th scope="col">Low</th>
+                  <th scope="col">Close</th>
+                  <th scope="col">Volume</th>
+                  <th scope="col">Signal</th>
+                </tr>
+              </thead>
+              <tbody id="chartDataTableBody"></tbody>
+            </table>
+          </div>
+        </figure>
+      </section>
+
+      <!-- SECTION 2: PREDICTION DETAIL & LINEAGE -->
+      <section id="detail-panel" class="panel" aria-labelledby="detail-heading">
+        <div class="panel-head">
+          <div>
+            <h2 id="detail-heading">Prediction Detail, Attribution &amp; Immutable Lineage</h2>
+            <p class="panel-desc">
+              Select any prediction below to verify decision boundaries, native model score factors, and frozen input features.
+            </p>
+          </div>
+          <span class="badge badge-neutral mono" id="detailPredictionIdBadge">Prediction: —</span>
+        </div>
+
+        <div class="detail-grid">
+          <div class="detail-list-pane">
+            <h3>Recorded Predictions (Up to Scrubbed Clock)</h3>
+            <div class="table-scroll">
+              <table class="data-table" aria-label="Recorded immutable predictions">
+                <thead>
+                  <tr>
+                    <th scope="col">Bar End (UTC)</th>
+                    <th scope="col">Signal</th>
+                    <th scope="col">P(UP)</th>
+                    <th scope="col">Timeliness</th>
+                    <th scope="col">Outcome</th>
+                    <th scope="col">Return +5m</th>
+                  </tr>
+                </thead>
+                <tbody id="predictionsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="detail-inspector-pane" aria-live="polite">
+            <div id="detailEmpty" class="empty-state">
+              <h3>No Prediction Selected</h3>
+              <p>Select a timestamped prediction from the table to inspect frozen inputs and lineage.</p>
+            </div>
+
+            <div id="detailContent" hidden>
+              <div class="time-lineage-grid">
+                <div class="kv-item">
+                  <span class="kv-label">Bar End</span>
+                  <span class="kv-val mono" id="detBarEnd">—</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Decision At</span>
+                  <span class="kv-val mono" id="detDecisionAt">—</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Target At (+5m)</span>
+                  <span class="kv-val mono" id="detTargetAt">—</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Logical As Of</span>
+                  <span class="kv-val mono" id="detLogicalAsOf">—</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Outcome Status</span>
+                  <span class="kv-val" id="detOutcomeStatus">—</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Actual / Return (+5m)</span>
+                  <span class="kv-val mono" id="detActualReturn">—</span>
+                </div>
+              </div>
+
+              <div class="attribution-box">
+                <div class="subpanel-head">
+                  <h3>Model Contribution Factors</h3>
+                  <span class="badge badge-neutral mono" id="detAttributionSpace">—</span>
+                </div>
+                <p class="methodology-note" id="detAttributionNote">
+                  Contributions are computed in the model's native uncalibrated score space (log-odds margin or constant baseline), not calibrated probability changes or causal price drivers.
+                </p>
+                <ul class="factor-list" id="detFactorList" aria-label="Model attribution factors"></ul>
+              </div>
+
+              <div class="lineage-box">
+                <h3>Provenance &amp; Immutability Lineage</h3>
+                <dl class="lineage-dl">
+                  <div><dt>Prediction ID</dt><dd class="mono" id="linPredId">—</dd></div>
+                  <div><dt>Run / Dataset</dt><dd class="mono" id="linRunDataset">—</dd></div>
+                  <div><dt>Contract</dt><dd class="mono" id="linContract">—</dd></div>
+                  <div><dt>Bundle &amp; Model</dt><dd class="mono" id="linBundleModel">—</dd></div>
+                  <div><dt>Feature Hash</dt><dd class="mono hash-text" id="linFeatureHash">—</dd></div>
+                  <div><dt>Fit Info End</dt><dd class="mono" id="linFitEnd">—</dd></div>
+                  <div><dt>Compute Time</dt><dd class="mono" id="linComputeMs">—</dd></div>
+                  <div><dt>Outcome Reason</dt><dd class="mono" id="linOutcomeReason">—</dd></div>
+                </dl>
+              </div>
+
+              <div class="snapshot-box">
+                <h3>Frozen Canonical Feature Snapshot (14 Features)</h3>
+                <div class="table-scroll">
+                  <table class="data-table data-table-compact">
+                    <thead>
+                      <tr>
+                        <th scope="col">Feature</th>
+                        <th scope="col">Frozen Snapshot Value</th>
+                      </tr>
+                    </thead>
+                    <tbody id="snapshotFeatureTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 3: MODEL EVIDENCE -->
+      <section id="evidence-panel" class="panel" aria-labelledby="evidence-heading">
+        <div class="panel-head">
+          <div>
+            <h2 id="evidence-heading">Model Evaluation Evidence &amp; Calibration</h2>
+            <p class="panel-desc" id="evidenceNotes">
+              Chronological purged walk-forward comparison separating baselines, candidate models, and data provenance.
+            </p>
+          </div>
+          <span class="badge badge-warn" id="evidenceStatusBadge">Checking…</span>
+        </div>
+
+        <div class="evidence-gate-grid">
+          <div class="gate-card" id="realMarketGateCard">
+            <h3>Real-Market Validation Status (~60 Sessions)</h3>
+            <p class="gate-status-line" id="realMarketGateHeadline">Checking real-market report availability…</p>
+            <p class="panel-desc" id="realMarketGateDetail">
+              If no verified ~60-session real-market evaluation exists, this panel explicitly reports unavailable rather than substituting fixture metrics.
+            </p>
+          </div>
+
+          <div class="gate-card" id="bundleMetadataCard">
+            <h3>Active Served Bundle Provenance</h3>
+            <dl class="lineage-dl" id="bundleProvenanceList">
+              <div><dt>Bundle ID</dt><dd class="mono" id="evBundleId">—</dd></div>
+              <div><dt>Champion</dt><dd class="mono" id="evChampion">—</dd></div>
+              <div><dt>Selection Metric</dt><dd class="mono" id="evSelectionMetric">—</dd></div>
+              <div><dt>Abstain Band Delta</dt><dd class="mono" id="evAbstainBand">—</dd></div>
+              <div><dt>Fit Info End</dt><dd class="mono" id="evFitInfoEnd">—</dd></div>
+              <div><dt>Holdout Window</dt><dd class="mono" id="evHoldoutWindow">—</dd></div>
+            </dl>
+          </div>
+        </div>
+
+        <div id="evidenceReportContent" hidden>
+          <div class="report-context-bar">
+            <strong id="evReportBanner">—</strong>
+            <span class="mono" id="evReportSamples">—</span>
+          </div>
+
+          <h3>Baseline vs Candidate Comparison (Out-of-Sample Holdout &amp; OOF Validation)</h3>
+          <div class="table-scroll">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">Split / Model</th>
+                  <th scope="col">Samples</th>
+                  <th scope="col">Brier (Primary)</th>
+                  <th scope="col">Log Loss</th>
+                  <th scope="col">ECE</th>
+                  <th scope="col">Balanced Acc</th>
+                  <th scope="col">Signaled Coverage</th>
+                  <th scope="col">Signaled Error Rate</th>
+                </tr>
+              </thead>
+              <tbody id="evidenceModelTableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="evidence-subgrid">
+            <div>
+              <h3>Non-Probabilistic Comparator &amp; Walk-Forward Folds</h3>
+              <p class="methodology-note" id="evComparatorText">—</p>
+              <div class="table-scroll">
+                <table class="data-table data-table-compact">
+                  <thead>
+                    <tr>
+                      <th scope="col">Fold</th>
+                      <th scope="col">Train UTC</th>
+                      <th scope="col">Val UTC (After Purge)</th>
+                      <th scope="col">Train / Val N</th>
+                    </tr>
+                  </thead>
+                  <tbody id="evidenceFoldsBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div>
+              <h3>Champion Holdout Calibration Bins</h3>
+              <div class="table-scroll">
+                <table class="data-table data-table-compact">
+                  <thead>
+                    <tr>
+                      <th scope="col">Probability Bin</th>
+                      <th scope="col">Count</th>
+                      <th scope="col">Mean Predicted P(UP)</th>
+                      <th scope="col">Empirical UP Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody id="evidenceCalibrationBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/static/app.js"></script>
+  </body>
+</html>

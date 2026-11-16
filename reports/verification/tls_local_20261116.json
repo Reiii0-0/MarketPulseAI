@@ -1,0 +1,27 @@
+{
+  "scope": "Local TLS with explicitly trusted Caddy internal CA; not public CA/domain deployment",
+  "certificate_verified": true,
+  "pytest_passed": 7,
+  "test_file": "tests/integration/test_tls_proxy.py",
+  "port_bindings": {
+    "postgres": {},
+    "kafka": {},
+    "grafana": {},
+    "api": {},
+    "caddy-tls": {
+      "443/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "18443"
+        }
+      ],
+      "80/tcp": [
+        {
+          "HostIp": "127.0.0.1",
+          "HostPort": "18080"
+        }
+      ]
+    }
+  },
+  "caddyfile_sha256": "dbed4be46186903c7c7d720d127d61e85416c6caab1971605e8d3af562aa8968"
+}

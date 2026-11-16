@@ -1,0 +1,35 @@
+{
+  "measured_at": "2026-11-16T16:02:40.296875+00:00",
+  "scope": "Clean export without .git/.venv/.env/model bundle; cold uv sync (--no-cache) + cold docker compose build (--no-cache) + fresh demo bootstrap.",
+  "cold_uv_sync_no_cache_seconds": 170.376,
+  "cold_docker_build_no_cache_seconds": 785.013,
+  "cold_download_and_build_total_seconds": 955.389,
+  "bootstrap_after_cold_build": {
+    "measured_at": "2026-11-16T16:02:20.123635+00:00",
+    "project": "mp_cold_20261116",
+    "run_id": "replay-cold-build-20261116",
+    "replay_speed_multiplier": 100.0,
+    "build_requested": false,
+    "phases_seconds": {
+      "bundle_prepare": 8.762,
+      "infrastructure_ready": 10.988,
+      "topic_init": 9.433,
+      "migration": 0.265,
+      "services_start": 9.636,
+      "replay_start": 8.282,
+      "predictions_ready": 30.168,
+      "dbt_verify": 10.287
+    },
+    "runtime_to_predictions_seconds": 68.772,
+    "total_seconds": 88.291,
+    "ports": {
+      "postgres": 5433,
+      "kafka": 9092,
+      "api": 8000,
+      "grafana": 3000
+    },
+    "dashboard_url": "http://127.0.0.1:8000",
+    "model_bundle": "mp_1m_5m_price_v1_fixture_smoke_v1_c2b87c36",
+    "images": "[{\"ID\":\"sha256:f9811e4e687ffecf1a43adb9b64096c50bc0d7a782f8608530f478b6542de7d5\",\"ContainerName\":\"mp_cold_20261116-grafana-1\",\"Repository\":\"grafana/grafana\",\"Tag\":\"10.4.0\",\"Platform\":\"linux/amd64\",\"Size\":574467336,\"Created\":\"2024-03-05T23:03:13.521287602Z\",\"LastTagTime\":\"2026-11-12T21:11:24.427120301Z\"},{\"ID\":\"sha256:9bf6715f14501404a517664ebd1e6802beb1c6f7f6b72a0908025f74740201d0\",\"ContainerName\":\"mp_cold_20261116-bar-consumer-1\",\"Repository\":\"mp_cold_20261116-bar-consumer\",\"Tag\":\"latest\",\"Platform\":\"linux/amd64\",\"Size\":3859388294,\"Created\":\"2026-11-16T23:00:42.144830366+07:00\",\"LastTagTime\":\"2026-11-16T16:00:43.831370434Z\"},{\"ID\":\"sha256:41c20d65b0a2180b9deca056d47540771752e69fe9225d5748dd65a25a9675d7\",\"ContainerName\":\"mp_cold_20261116-init-kafka-1\",\"Repository\":\"apache/kafka\",\"Tag\":\"3.7.0\",\"Platform\":\"linux/amd64\",\"Size\":613209237,\"Created\":\"2024-02-09T14:50:00.364476489Z\",\"LastTagTime\":\"2026-11-12T21:10:21.671203824Z\"},{\"ID\":\"sha256:9293f58884cc10733812cb99da7c1c4a00e6402fd922eb199d101c27bf5db882\",\"ContainerName\":\"mp_cold_20261116-producer-1\",\"Repository\":\"mp_cold_20261116-producer\",\"Tag\":\"latest\",\"Platform\":\"linux/amd64\",\"Size\":3857841387,\"Created\":\"2026-11-16T23:00:47.012223448+07:00\",\"LastTagTime\":\"2026-11-16T16:00:50.004442287Z\"},{\"ID\":\"sha256:bd67c4c11b57937fba5a75c52133fa23337ca1b144110c0b9747ad6bad46bd3d\",\"ContainerName\":\"mp_cold_20261116-api-1\",\"Repository\":\"mp_cold_20261116-api\",\"Tag\":\"latest\",\"Platform\":\"linux/amd64\",\"Size\":4261237260,\"Created\":\"2026-11-16T23:00:01.095662475+07:00\",\"LastTagTime\":\"2026-11-16T16:00:03.60013218Z\"},{\"ID\":\"sha256:eab009ce9447a891d9482702d370bbf132c18563bb87cfdcc2b815c6d3b0372f\",\"ContainerName\":\"mp_cold_20261116-postgres-1\",\"Repository\":\"postgres\",\"Tag\":\"15-alpine\",\"Platform\":\"linux/amd64\",\"Size\":416404114,\"Created\":\"2026-11-05T19:10:13.779407342Z\",\"LastTagTime\":\"2026-11-12T21:11:05.3447897Z\"},{\"ID\":\"sha256:66731acc19c10d83090e758e71b1fd08c2391bd4b1d443ff45342708c50147d1\",\"ContainerName\":\"mp_cold_20261116-dbt-runner-1\",\"Repository\":\"mp_cold_20261116-dbt-runner\",\"Tag\":\"latest\",\"Platform\":\"linux/amd64\",\"Size\":870901443,\"Created\":\"2026-11-16T22:48:03.582624794+07:00\",\"LastTagTime\":\"2026-11-16T15:48:03.763059475Z\"},{\"ID\":\"sha256:41c20d65b0a2180b9deca056d47540771752e69fe9225d5748dd65a25a9675d7\",\"ContainerName\":\"mp_cold_20261116-kafka-1\",\"Repository\":\"apache/kafka\",\"Tag\":\"3.7.0\",\"Platform\":\"linux/amd64\",\"Size\":613209237,\"Created\":\"2024-02-09T14:50:00.364476489Z\",\"LastTagTime\":\"2026-11-12T21:10:21.671203824Z\"},{\"ID\":\"sha256:bd67c4c11b57937fba5a75c52133fa23337ca1b144110c0b9747ad6bad46bd3d\",\"ContainerName\":\"mp_cold_20261116-prediction-worker-1\",\"Repository\":\"mp_cold_20261116-api\",\"Tag\":\"latest\",\"Platform\":\"linux/amd64\",\"Size\":4261237260,\"Created\":\"2026-11-16T23:00:01.095662475+07:00\",\"LastTagTime\":\"2026-11-16T16:00:03.60013218Z\"}]"
+  }
+}

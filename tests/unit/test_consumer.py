@@ -1,114 +1,219 @@
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
+from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
-from confluent_kafka import Message
-
+from consumer.bar_consumer import BarConsumer, BarConsumerConfig
+from consumer.base import PROGRESS_UPSERT_QUERY, QUARANTINE_INSERT_QUERY
 from consumer.db import DatabaseManager
-from consumer.sentiment_consumer import SentimentConsumer
-from consumer.tick_consumer import TickConsumer
+from consumer.sentiment_consumer import SentimentConsumer, SentimentConsumerConfig
+from consumer.tick_consumer import ConsumerConfig, TickConsumer
 
 
-@pytest.fixture
-def mock_msg():
-    """Create a mock Kafka message."""
-    msg = MagicMock(spec=Message)
+def _make_mock_db() -> tuple[MagicMock, MagicMock]:
+    db_mgr = MagicMock(spec=DatabaseManager)
+    cur = MagicMock()
+
+    @contextmanager
+    def _tx():
+        yield cur
+
+    db_mgr.transaction.side_effect = _tx
+    return db_mgr, cur
+
+
+def _make_kafka_msg(
+    payload: bytes | None,
+    *,
+    topic: str = "raw.market.ticks",
+    partition: int = 0,
+    offset: int = 123,
+) -> MagicMock:
+    msg = MagicMock()
     msg.error.return_value = None
-    msg.offset.return_value = 123
-    msg.partition.return_value = 0
+    msg.value.return_value = payload
+    msg.topic.return_value = topic
+    msg.partition.return_value = partition
+    msg.offset.return_value = offset
     return msg
 
 
-@pytest.mark.unit
-def test_tick_consumer_inserts_valid_message_to_postgres(fake_market_tick, mock_msg, mocker):
-    """T-024a: Verify valid tick causes DB insert and Kafka commit."""
-    mock_msg.value.return_value = json.dumps(fake_market_tick).encode("utf-8")
+def test_tick_consumer_inserts_valid_message_and_progress_in_one_transaction() -> None:
+    """Valid tick persists business row + delivery progress atomically before Kafka commit."""
+    with patch("consumer.tick_consumer.Consumer") as mock_consumer_cls:
+        mock_consumer = MagicMock()
+        mock_consumer_cls.return_value = mock_consumer
+        db_mgr, cur = _make_mock_db()
 
-    db_mgr = MagicMock(spec=DatabaseManager)
-    config = ConsumerConfig(kafka_bootstrap_servers="localhost:9092")
+        consumer = TickConsumer(
+            ConsumerConfig(kafka_bootstrap_servers="localhost:9092"),
+            db_mgr,
+        )
+        payload: dict[str, Any] = {
+            "ticker": "AAPL",
+            "event_timestamp": "2026-01-01T10:00:00+00:00",
+            "price": 182.55,
+            "volume": 200,
+            "replay_sequence": 1,
+            "dataset_id": "ds_test",
+            "source_event_id": "ds_test:tick:AAPL:1",
+            "run_id": "run_001",
+            "provenance": "real_historical",
+        }
+        msg = _make_kafka_msg(json.dumps(payload).encode("utf-8"))
+        consumer._process_message(msg)
 
-    with patch("consumer.tick_consumer.Consumer"):
-        consumer = TickConsumer(config, db_mgr)
-        consumer.consumer = MagicMock() # Mock the actual confluent-kafka consumer
-
-        consumer._process_message(mock_msg)
-
-        # Verify DB insert
-        assert db_mgr.execute_upsert.call_count == 1
-        query, params = db_mgr.execute_upsert.call_args[0]
-        assert "INSERT INTO raw.market_ticks" in query
-        assert params["ticker"] == "AAPL"
-        assert params["kafka_offset"] == 123
-
-        # Verify Kafka commit
-        consumer.consumer.commit.assert_called_once_with(message=mock_msg, asynchronous=False)
-
-
-@pytest.mark.unit
-def test_tick_consumer_skips_invalid_json_message(mock_msg, caplog):
-    """T-024b: Verify invalid JSON is caught and logged."""
-    mock_msg.value.return_value = b"invalid json {"
-
-    db_mgr = MagicMock(spec=DatabaseManager)
-    config = ConsumerConfig(kafka_bootstrap_servers="localhost:9092")
-
-    with patch("consumer.tick_consumer.Consumer"):
-        consumer = TickConsumer(config, db_mgr)
-        consumer.consumer = MagicMock()
-
-        consumer._process_message(mock_msg)
-
-        assert db_mgr.execute_upsert.call_count == 0
-        assert consumer.consumer.commit.call_count == 0
-        assert "Failed to decode JSON from Kafka" in caplog.text
+        assert db_mgr.transaction.call_count == 1
+        assert cur.execute.call_count == 2
+        assert cur.execute.call_args_list[0].args[0] == TickConsumer.UPSERT_QUERY
+        assert cur.execute.call_args_list[1].args[0] == PROGRESS_UPSERT_QUERY
+        mock_consumer.commit.assert_called_once_with(message=msg, asynchronous=False)
 
 
-@pytest.mark.unit
-def test_tick_consumer_skips_validation_failure_message(fake_market_tick, mock_msg, caplog):
-    """T-024c: Verify validation failure skips DB write."""
-    fake_market_tick["price"] = -10.0 # Invalid
-    mock_msg.value.return_value = json.dumps(fake_market_tick).encode("utf-8")
+def test_tick_consumer_quarantines_invalid_json_and_advances_offset() -> None:
+    """Invalid JSON poison payload is quarantined with sanitized payload before offset commit."""
+    with patch("consumer.tick_consumer.Consumer") as mock_consumer_cls:
+        mock_consumer = MagicMock()
+        mock_consumer_cls.return_value = mock_consumer
+        db_mgr, cur = _make_mock_db()
 
-    db_mgr = MagicMock(spec=DatabaseManager)
-    config = ConsumerConfig(kafka_bootstrap_servers="localhost:9092")
+        consumer = TickConsumer(
+            ConsumerConfig(kafka_bootstrap_servers="localhost:9092"),
+            db_mgr,
+        )
+        msg = _make_kafka_msg(b"not-valid-json api_key=supersecret123")
+        consumer._process_message(msg)
 
-    with patch("consumer.tick_consumer.Consumer"):
-        consumer = TickConsumer(config, db_mgr)
-        consumer.consumer = MagicMock()
-
-        consumer._process_message(mock_msg)
-
-        assert db_mgr.execute_upsert.call_count == 0
-        assert "Validation failure for tick message" in caplog.text
-
-
-@pytest.mark.unit
-def test_consumer_uses_kafka_offset_for_deduplication():
-    """T-024d: Verify SQL query contains ON CONFLICT."""
-    assert "ON CONFLICT (kafka_partition, kafka_offset) DO NOTHING" in TickConsumer.UPSERT_QUERY
-    assert "ON CONFLICT (kafka_partition, kafka_offset) DO NOTHING" in SentimentConsumer.UPSERT_QUERY
+        assert db_mgr.transaction.call_count == 1
+        assert cur.execute.call_count == 2
+        assert cur.execute.call_args_list[0].args[0] == QUARANTINE_INSERT_QUERY
+        quarantine_params = cur.execute.call_args_list[0].args[1]
+        assert "supersecret123" not in quarantine_params[8]
+        assert "[REDACTED]" in quarantine_params[8]
+        assert cur.execute.call_args_list[1].args[0] == PROGRESS_UPSERT_QUERY
+        mock_consumer.commit.assert_called_once_with(message=msg, asynchronous=False)
 
 
-@pytest.mark.unit
-def test_sentiment_consumer_inserts_valid_event_to_postgres(fake_sentiment_event, mock_msg):
-    """T-024e: Verify valid sentiment event causes DB insert."""
-    mock_msg.value.return_value = json.dumps(fake_sentiment_event).encode("utf-8")
+def test_tick_consumer_quarantines_validation_failure_message() -> None:
+    """Pydantic ValidationError quarantines event with trace metadata and commits offset."""
+    with patch("consumer.tick_consumer.Consumer") as mock_consumer_cls:
+        mock_consumer = MagicMock()
+        mock_consumer_cls.return_value = mock_consumer
+        db_mgr, cur = _make_mock_db()
 
-    db_mgr = MagicMock(spec=DatabaseManager)
-    config = SentimentConsumerConfig(kafka_bootstrap_servers="localhost:9092")
+        consumer = TickConsumer(
+            ConsumerConfig(kafka_bootstrap_servers="localhost:9092"),
+            db_mgr,
+        )
+        bad_payload = {
+            "ticker": "AAPL",
+            "event_timestamp": "2026-01-01T10:00:00+00:00",
+            "price": -10.0,
+            "volume": 10,
+            "replay_sequence": 1,
+            "dataset_id": "ds_bad",
+            "source_event_id": "ds_bad:tick:1",
+            "run_id": "run_bad",
+        }
+        msg = _make_kafka_msg(json.dumps(bad_payload).encode("utf-8"))
+        consumer._process_message(msg)
 
-    with patch("consumer.sentiment_consumer.Consumer"):
-        consumer = SentimentConsumer(config, db_mgr)
-        consumer.consumer = MagicMock()
+        assert db_mgr.transaction.call_count == 1
+        assert cur.execute.call_args_list[0].args[0] == QUARANTINE_INSERT_QUERY
+        q_params = cur.execute.call_args_list[0].args[1]
+        assert q_params[0] == "run_bad"
+        assert q_params[1] == "ds_bad"
+        assert q_params[2] == "ds_bad:tick:1"
+        assert q_params[6] == "ValidationError"
+        mock_consumer.commit.assert_called_once_with(message=msg, asynchronous=False)
 
-        consumer._process_message(mock_msg)
 
-        assert db_mgr.execute_upsert.call_count == 1
-        query, params = db_mgr.execute_upsert.call_args[0]
-        assert "INSERT INTO raw.sentiment_events" in query
-        assert params["ticker"] == "AAPL"
-        assert params["sentiment_label"] == "POSITIVE"
+def test_consumers_use_business_identity_for_deduplication() -> None:
+    """All consumers deduplicate on business identity (dataset_id, source_event_id), not Kafka offset."""
+    for query in (
+        TickConsumer.UPSERT_QUERY,
+        SentimentConsumer.UPSERT_QUERY,
+        BarConsumer.UPSERT_QUERY,
+    ):
+        assert "ON CONFLICT (dataset_id, source_event_id) DO NOTHING" in query
+        assert "ON CONFLICT (kafka_partition, kafka_offset)" not in query
 
-        consumer.consumer.commit.assert_called_once_with(message=mock_msg, asynchronous=False)
+
+def test_sentiment_consumer_inserts_valid_event_to_postgres() -> None:
+    """Valid sentiment event persists business row + delivery progress and commits offset."""
+    with patch("consumer.sentiment_consumer.Consumer") as mock_consumer_cls:
+        mock_consumer = MagicMock()
+        mock_consumer_cls.return_value = mock_consumer
+        db_mgr, cur = _make_mock_db()
+
+        consumer = SentimentConsumer(
+            SentimentConsumerConfig(kafka_bootstrap_servers="localhost:9092"),
+            db_mgr,
+        )
+        payload = {
+            "ticker": "MSFT",
+            "event_timestamp": "2026-01-01T10:05:00+00:00",
+            "available_at": "2026-01-01T10:05:02+00:00",
+            "source": "MARKETAUX",
+            "headline": "Microsoft beats earnings",
+            "sentiment_score": 0.72,
+            "sentiment_label": "POSITIVE",
+            "confidence": 0.95,
+            "replay_sequence": 2,
+            "dataset_id": "ds_news",
+            "source_event_id": "ds_news:msft:2",
+            "provenance": "real_historical",
+        }
+        msg = _make_kafka_msg(
+            json.dumps(payload).encode("utf-8"),
+            topic="raw.sentiment.events",
+            partition=1,
+            offset=50,
+        )
+        consumer._process_message(msg)
+
+        assert db_mgr.transaction.call_count == 1
+        assert cur.execute.call_args_list[0].args[0] == SentimentConsumer.UPSERT_QUERY
+        mock_consumer.commit.assert_called_once_with(message=msg, asynchronous=False)
+
+
+def test_bar_consumer_inserts_canonical_bar_record() -> None:
+    """Valid 1-minute OHLCV bar persists to raw.market_bars inside one transaction."""
+    with patch("consumer.bar_consumer.Consumer") as mock_consumer_cls:
+        mock_consumer = MagicMock()
+        mock_consumer_cls.return_value = mock_consumer
+        db_mgr, cur = _make_mock_db()
+
+        consumer = BarConsumer(
+            BarConsumerConfig(kafka_bootstrap_servers="localhost:9092"),
+            db_mgr,
+        )
+        payload = {
+            "ticker": "AAPL",
+            "bar_start": "2026-01-02T14:30:00+00:00",
+            "bar_end": "2026-01-02T14:31:00+00:00",
+            "available_at": "2026-01-02T14:31:05+00:00",
+            "open": 185.0,
+            "high": 185.5,
+            "low": 184.9,
+            "close": 185.2,
+            "volume": 12000,
+            "dataset_id": "fixture_smoke_v1",
+            "source_event_id": "fixture_smoke_v1:AAPL:2026-01-02T14:31:00+00:00",
+            "run_id": "replay_001",
+            "provenance": "synthetic_mock",
+            "availability_assumed": True,
+        }
+        msg = _make_kafka_msg(
+            json.dumps(payload).encode("utf-8"),
+            topic="raw.market.bars",
+            partition=2,
+            offset=9,
+        )
+        consumer._process_message(msg)
+
+        assert db_mgr.transaction.call_count == 1
+        assert cur.execute.call_args_list[0].args[0] == BarConsumer.UPSERT_QUERY
+        mock_consumer.commit.assert_called_once_with(message=msg, asynchronous=False)

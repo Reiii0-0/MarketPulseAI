@@ -1,0 +1,148 @@
+{
+  "measured_at": "2026-11-16T15:10:06.514635+00:00",
+  "base_url": "http://127.0.0.1:18000",
+  "workload": {
+    "run_id": "replay-compose-1794841520",
+    "ticker": "MSFT",
+    "target_rps": 10.0,
+    "concurrency": 4,
+    "configured_duration_seconds": 10.0,
+    "actual_duration_seconds": 9.905,
+    "total_requests": 100,
+    "achieved_rps": 10.1,
+    "warm_state": true
+  },
+  "hardware": {
+    "platform": "Linux-7.2.6-1-cachyos-x86_64-with-glibc2.44",
+    "machine": "x86_64",
+    "cpu_count": 16,
+    "mem_total_gib": 19.21,
+    "python_version": "3.11.16",
+    "load_average": [
+      5.9169921875,
+      5.0537109375,
+      3.54736328125
+    ]
+  },
+  "scheduled_latency_ms": {
+    "p95": 8.5,
+    "max": 10.37
+  },
+  "scheduling_delay_ms": {
+    "p95": 0.11,
+    "max": 0.23
+  },
+  "response_validation": "Every warmup/timed response parsed; readiness, bundle, run, ticker and nonempty data checked.",
+  "latency_ms": {
+    "p50": 4.96,
+    "p95": 8.44,
+    "p99": 9.15,
+    "max": 10.26
+  },
+  "error_count": 0,
+  "sample_errors": [],
+  "slowest_endpoint_p95": "/api/v1/predictions?run_id=replay-compose-1794841520&ticker=MSFT&limit=50",
+  "endpoints": {
+    "/health/ready": {
+      "count": 15,
+      "p50_ms": 3.27,
+      "p95_ms": 4.59,
+      "p99_ms": 5.21,
+      "max_ms": 5.21,
+      "avg_payload_bytes": 107
+    },
+    "/api/v1/runs?limit=10": {
+      "count": 15,
+      "p50_ms": 4.27,
+      "p95_ms": 5.18,
+      "p99_ms": 6.55,
+      "max_ms": 6.55,
+      "avg_payload_bytes": 873
+    },
+    "/api/v1/tickers?run_id=replay-compose-1794841520": {
+      "count": 14,
+      "p50_ms": 3.97,
+      "p95_ms": 4.53,
+      "p99_ms": 4.93,
+      "max_ms": 4.93,
+      "avg_payload_bytes": 45
+    },
+    "/api/v1/bars?run_id=replay-compose-1794841520&ticker=MSFT&limit=60": {
+      "count": 14,
+      "p50_ms": 5.21,
+      "p95_ms": 6.62,
+      "p99_ms": 6.79,
+      "max_ms": 6.79,
+      "avg_payload_bytes": 15253
+    },
+    "/api/v1/predictions?run_id=replay-compose-1794841520&ticker=MSFT&limit=50": {
+      "count": 14,
+      "p50_ms": 8.09,
+      "p95_ms": 9.02,
+      "p99_ms": 10.26,
+      "max_ms": 10.26,
+      "avg_payload_bytes": 12238
+    },
+    "/api/v1/outcomes?run_id=replay-compose-1794841520&ticker=MSFT&limit=50": {
+      "count": 14,
+      "p50_ms": 6.69,
+      "p95_ms": 7.69,
+      "p99_ms": 9.15,
+      "max_ms": 9.15,
+      "avg_payload_bytes": 12404
+    },
+    "/api/v1/evidence": {
+      "count": 14,
+      "p50_ms": 4.92,
+      "p95_ms": 5.89,
+      "p99_ms": 6.51,
+      "max_ms": 6.51,
+      "avg_payload_bytes": 32778
+    }
+  },
+  "container_resources": [
+    {
+      "container": "mp_e2e_1794841520-grafana-1",
+      "cpu_pct": "0.02%",
+      "mem_usage": "46.69MiB / 19.21GiB",
+      "mem_pct": "0.24%"
+    },
+    {
+      "container": "mp_e2e_1794841520-api-1",
+      "cpu_pct": "0.10%",
+      "mem_usage": "168.7MiB / 19.21GiB",
+      "mem_pct": "0.86%"
+    },
+    {
+      "container": "mp_e2e_1794841520-bar-consumer-1",
+      "cpu_pct": "0.04%",
+      "mem_usage": "28.25MiB / 19.21GiB",
+      "mem_pct": "0.14%"
+    },
+    {
+      "container": "mp_e2e_1794841520-dbt-runner-1",
+      "cpu_pct": "0.00%",
+      "mem_usage": "3.984MiB / 19.21GiB",
+      "mem_pct": "0.02%"
+    },
+    {
+      "container": "mp_e2e_1794841520-prediction-worker-1",
+      "cpu_pct": "0.00%",
+      "mem_usage": "146.2MiB / 19.21GiB",
+      "mem_pct": "0.74%"
+    },
+    {
+      "container": "mp_e2e_1794841520-postgres-1",
+      "cpu_pct": "0.03%",
+      "mem_usage": "34.86MiB / 19.21GiB",
+      "mem_pct": "0.18%"
+    },
+    {
+      "container": "mp_e2e_1794841520-kafka-1",
+      "cpu_pct": "0.73%",
+      "mem_usage": "311.5MiB / 19.21GiB",
+      "mem_pct": "1.58%"
+    }
+  ],
+  "warm_bootstrap_seconds": 179.0
+}

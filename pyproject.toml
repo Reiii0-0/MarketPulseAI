@@ -1,9 +1,11 @@
 [project]
 name = "marketpulseai"
 version = "0.1.0"
-description = "Real-time financial intelligence platform with Kafka, dbt, XGBoost, and FastAPI."
+description = "Reproducible market data pipeline with explainable predictions, time-aware evaluation, and observable failure recovery."
+readme = "README.md"
+license = { text = "MIT" }
 authors = [
-    { name = "Principal Architect", email = "architect@marketpulse.ai" }
+    { name = "Reiii0-0", email = "kuuhakuframe@gmail.com" }
 ]
 requires-python = ">=3.11,<3.12"
 dependencies = [
@@ -32,10 +34,13 @@ dev = [
     "mypy>=1.10,<2.0",
     "dbt-postgres>=1.7,<1.8",
 ]
+e2e = [
+    "playwright>=1.48,<2.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["api*", "consumer*", "producer*", "model*"]
+include = ["api*", "consumer*", "producer*", "model*", "pipeline*"]
 
 [tool.ruff]
 line-length = 100
@@ -46,12 +51,14 @@ select = ["E", "W", "F", "I", "B", "UP", "T201"]
 ignore = ["B008", "E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["producer", "consumer", "api", "model"]
+known-first-party = ["producer", "consumer", "api", "model", "pipeline"]
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
+explicit_package_bases = true
+mypy_path = "."
 disallow_untyped_defs = false
 check_untyped_defs = false
 
@@ -62,10 +69,13 @@ check_untyped_defs = false
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-addopts = "-ra -q --cov=api --cov=consumer --cov=producer --cov=model --cov-report=term-missing"
+pythonpath = ["."]
+addopts = "-ra -q --cov=api --cov=consumer --cov=producer --cov=model --cov=pipeline --cov-report=term-missing"
 testpaths = ["tests"]
 markers = [
     "unit: mark a test as a unit test",
     "integration: mark a test as an integration test",
+    "e2e: mark a test as an end-to-end browser verification test",
+    "compose: mark a test requiring a live Docker Compose stack",
 ]
 asyncio_mode = "auto"

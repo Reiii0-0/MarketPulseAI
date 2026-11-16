@@ -4,26 +4,36 @@ models:
   - name: stg_market_ticks
     description: "Staging model for market ticks."
     columns:
+      - name: dataset_id
+        tests: [not_null]
+      - name: source_event_id
+        tests: [not_null]
       - name: ticker
         tests: [not_null]
-      - name: event_timestamp
+      - name: event_at
+        tests: [not_null]
+      - name: available_at
         tests: [not_null]
       - name: price
         tests: [not_null]
       - name: volume
         tests: [not_null]
 
-  - name: stg_sentiment_events
-    description: "Staging model for sentiment events."
+  - name: stg_market_bars
+    description: "Staging model for canonical 1-minute market bars."
     columns:
-      - name: sentiment_label
-        tests:
-          - accepted_values:
-              values: ['POSITIVE', 'NEGATIVE', 'NEUTRAL']
-
-  - name: int_ohlcv_5min
-    description: "5-minute OHLCV aggregation."
-    columns:
+      - name: dataset_id
+        tests: [not_null]
+      - name: source_event_id
+        tests: [not_null]
+      - name: ticker
+        tests: [not_null]
+      - name: bar_start
+        tests: [not_null]
+      - name: bar_end
+        tests: [not_null]
+      - name: available_at
+        tests: [not_null]
       - name: open
         tests: [not_null]
       - name: high
@@ -35,18 +45,130 @@ models:
       - name: volume
         tests: [not_null]
 
-  - name: marts.stock_features
-    description: "Final ML-ready feature table."
+  - name: stg_sentiment_events
+    description: "Staging model for sentiment events."
     columns:
+      - name: dataset_id
+        tests: [not_null]
+      - name: source_event_id
+        tests: [not_null]
+      - name: sentiment_label
+        tests:
+          - accepted_values:
+              values: ['POSITIVE', 'NEGATIVE', 'NEUTRAL']
+
+  - name: int_ohlcv_1min
+    description: "Canonical 1-minute UTC OHLCV bar model constrained to regular America/New_York market session."
+    columns:
+      - name: contract_id
+        tests: [not_null]
+      - name: dataset_id
+        tests: [not_null]
       - name: ticker
         tests: [not_null]
-      - name: window_start
+      - name: bar_start
         tests: [not_null]
+      - name: bar_end
+        tests: [not_null]
+      - name: open
+        tests: [not_null]
+      - name: high
+        tests: [not_null]
+      - name: low
+        tests: [not_null]
+      - name: close
+        tests: [not_null]
+      - name: volume
+        tests: [not_null]
+    tests:
+      - unique:
+          column_name: "(dataset_id || '|' || ticker || '|' || bar_end::text)"
+
+  - name: int_technical_indicators
+    description: "Canonical mp_1m_5m_price_v1 rolling features isolated by contiguous same-session segment_id."
+    columns:
+      - name: contract_id
+        tests: [not_null]
+      - name: warmup_complete
+        tests: [not_null]
+      - name: contiguous_bar_count
+        tests: [not_null]
+    tests:
+      - unique:
+          column_name: "(COALESCE(run_id, '') || '|' || dataset_id || '|' || ticker || '|' || bar_end::text)"
+
+  - name: stock_features
+    description: "Canonical ML feature view (zero future LEAD/target columns)."
+    columns:
+      - name: contract_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['mp_1m_5m_price_v1']
+      - name: contract_version
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['1.0.0']
+      - name: ticker
+        tests: [not_null]
+      - name: bar_start
+        tests: [not_null]
+      - name: bar_end
+        tests: [not_null]
+      - name: decision_at
+        tests: [not_null]
+      - name: warmup_complete
+        tests: [not_null]
+    tests:
+      - unique:
+          column_name: "(COALESCE(run_id, '') || '|' || dataset_id || '|' || ticker || '|' || bar_end::text)"
+
+  - name: bar_targets
+    description: "Separated +5m exact-timestamp label view respecting session boundaries and target finality."
+    columns:
+      - name: contract_id
+        tests: [not_null]
+      - name: ticker
+        tests: [not_null]
+      - name: bar_end
+        tests: [not_null]
+      - name: target_at
+        tests: [not_null]
+      - name: target_status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['realized', 'unavailable']
       - name: target_direction
         tests:
           - accepted_values:
               values: [0, 1]
               quote: false
+              config:
+                where: "target_direction IS NOT NULL"
     tests:
       - unique:
-          column_name: "(ticker || '-' || window_start)"
+          column_name: "(COALESCE(run_id, '') || '|' || dataset_id || '|' || ticker || '|' || bar_end::text)"
+
+  - name: realized_outcomes
+    description: "Non-mutating realized outcome view matching predictions to final target bars."
+    columns:
+      - name: prediction_id
+        tests: [unique, not_null]
+      - name: signal_label
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['UP', 'NOT_UP', 'NO_SIGNAL']
+      - name: outcome_status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['realized', 'pending', 'unavailable', 'expired']
+      - name: actual_direction
+        tests:
+          - accepted_values:
+              values: ['UP', 'NOT_UP']
+              config:
+                where: "actual_direction IS NOT NULL"

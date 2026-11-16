@@ -5,10 +5,27 @@ __pycache__/
 venv/
 .venv/
 
+# Local check outputs
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Generated dbt state
+dbt_project/target/
+dbt_project/logs/
+dbt_project/.user.yml
+
 # Data & Artefacts
-data/raw/*.csv
+data/raw/
+data/private/
+reports/private/
 model/artefacts/*.json
 model/artefacts/*.pkl
+model/artefacts/releases/
+model/artefacts/current
 !model/artefacts/.gitkeep
 
 # IDEs
@@ -18,5 +35,6 @@ model/artefacts/*.pkl
 # OS
 .DS_Store
 
-# Environment
+# Environment & Transient CI Artifacts
 .env
+ci-artifacts/

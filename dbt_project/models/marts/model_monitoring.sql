@@ -1,4 +1,4 @@
--- project/dbt_project/models/marts/model_monitoring.sql
+-- dbt_project/models/marts/model_monitoring.sql
 
 WITH base_predictions AS (
     SELECT
@@ -27,5 +27,5 @@ aggregated AS (
 
 SELECT
     *,
-    (correct_predictions::FLOAT / total_predictions)::NUMERIC(6, 4) AS accuracy
+    (correct_predictions::FLOAT / NULLIF(total_predictions, 0))::NUMERIC(6, 4) AS accuracy
 FROM aggregated
